@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Noise Monitor</title>
+<style>
+  :root {
+    --navy-dark: #0F1C33;
+    --navy-mid: #16274A;
+    --navy-light: #1E345C;
+    --gold: #E3A857;
+    --green: #4CAF6D;
+    --red: #D64545;
+    --text: #F2EEE4;
+    --text-dim: #8FA0C2;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--navy-dark);
+    color: var(--text);
+    font-family: Arial, Helvetica, sans-serif;
+    overflow: hidden;
+  }
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding: 2.5vh 4vw 3vh;
+  }
+
+  /* ---- Top bar ---- */
+  #topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  #topbar-left { display: flex; align-items: center; gap: 14px; }
+  #periodLabel {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1.5rem;
+    color: var(--text-dim);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid var(--navy-mid);
+    padding: 4px 2px;
+    width: 200px;
+  }
+  #periodLabel:focus { outline: none; border-bottom-color: var(--gold); }
+  #statusPill {
+    font-size: 0.9rem;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: var(--navy-mid);
+    color: var(--text-dim);
+  }
+  #statusPill.live { color: var(--green); }
+  #statusPill.learning { color: var(--gold); }
+  #statusPill.off { color: #C97878; }
+  #debugReadout {
+    font-size: 0.7rem;
+    color: #5A6B8C;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- Hero row: streak + violations ---- */
+  #hero {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6vw;
+  }
+  #streakBlock { text-align: center; }
+  #streakTime {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-weight: 700;
+    font-size: 18vh;
+    line-height: 1;
+    color: var(--gold);
+    font-variant-numeric: tabular-nums;
+    transition: color 0.3s ease;
+  }
+  #streakLabel {
+    font-size: 1.3rem;
+    color: var(--text-dim);
+    margin-top: 0.5vh;
+  }
+  #streakBest {
+    font-size: 1rem;
+    color: #6C7EA3;
+    margin-top: 0.3vh;
+  }
+  #streakBest b { color: var(--text-dim); }
+
+  #violationBlock {
+    text-align: center;
+    padding: 3vh 2.5vw;
+    border-left: 1px solid var(--navy-mid);
+  }
+  #violationCount {
+    font-family: Georgia, serif;
+    font-weight: 700;
+    font-size: 9vh;
+    line-height: 1;
+    color: var(--green);
+    transition: color 0.25s ease, transform 0.15s ease;
+  }
+  #violationCount.amber { color: var(--gold); }
+  #violationCount.red {
+    color: var(--red);
+    animation: pulse 0.9s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+  #violationCaption { font-size: 1rem; color: var(--text-dim); margin-top: 0.3vh; }
+
+  /* ---- EQ visualizer ---- */
+  #eqWrap {
+    flex-shrink: 0;
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto 1.5vh;
+  }
+  #eq {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 5px;
+    height: 14vh;
+    background: var(--navy-mid);
+    border-radius: 10px;
+    padding: 10px 14px 0;
+    overflow: hidden;
+  }
+  .eqBar {
+    flex: 1;
+    min-width: 4px;
+    max-width: 22px;
+    height: 4%;
+    border-radius: 3px 3px 0 0;
+    background: linear-gradient(180deg, var(--gold), #C97A3A);
+    transition: height 0.05s linear, background 0.15s ease;
+  }
+  .eqBar.hot {
+    background: linear-gradient(180deg, var(--red), #8C2F2F);
+  }
+
+  /* ---- Controls ---- */
+  #controls {
+    flex-shrink: 0;
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  button {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 0.95rem;
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: 1px solid var(--navy-mid);
+    background: var(--navy-mid);
+    color: var(--text);
+    cursor: pointer;
+  }
+  button:hover { border-color: var(--gold); }
+  button.primary {
+    background: var(--gold);
+    color: var(--navy-dark);
+    font-weight: 700;
+    border-color: var(--gold);
+  }
+  #limitRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-dim);
+    font-size: 0.9rem;
+  }
+  #limitRow input {
+    width: 46px;
+    text-align: center;
+    background: var(--navy-mid);
+    color: var(--text);
+    border: 1px solid var(--navy-mid);
+    border-radius: 6px;
+    padding: 4px;
+    font-size: 0.9rem;
+  }
+
+  /* ---- Log drawer ---- */
+  #logToggle {
+    position: fixed;
+    bottom: 14px;
+    right: 16px;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+  }
+  #logDrawer {
+    position: fixed;
+    bottom: 0; right: 0;
+    width: 340px;
+    max-height: 60vh;
+    background: var(--navy-mid);
+    border-top-left-radius: 10px;
+    padding: 16px;
+    overflow-y: auto;
+    display: none;
+    font-size: 0.85rem;
+  }
+  #logDrawer.show { display: block; }
+  #logDrawer h3 { margin: 0 0 10px; font-family: Georgia, serif; color: var(--gold); font-size: 1.1rem; }
+  #logDrawer table { width: 100%; border-collapse: collapse; }
+  #logDrawer td, #logDrawer th { padding: 4px 6px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  #logDrawer button.small { font-size: 0.75rem; padding: 4px 8px; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <div id="topbar-left">
+      <input id="periodLabel" value="Period 1" spellcheck="false">
+      <div id="statusPill" class="off">Mic off</div>
+    </div>
+    <div id="debugReadout"></div>
+  </div>
+
+  <div id="hero">
+    <div id="streakBlock">
+      <div id="streakTime">0:00</div>
+      <div id="streakLabel">quiet streak</div>
+      <div id="streakBest">best today: <b id="bestTime">0:00</b></div>
+    </div>
+    <div id="violationBlock">
+      <div id="violationCount">0</div>
+      <div id="violationCaption">violations · limit <span id="limitShown">2</span></div>
+    </div>
+  </div>
+
+  <div id="eqWrap">
+    <div id="eq"></div>
+  </div>
+
+  <div id="controls">
+    <button id="micBtn" class="primary">Start listening</button>
+    <div id="limitRow">
+      Limit:
+      <input id="limitInput" type="number" min="1" max="20" value="2">
+      <span>per class</span>
+    </div>
+    <button id="resetBtn">New period</button>
+  </div>
+</div>
+
+<button id="logToggle">log ▲</button>
+<div id="logDrawer">
+  <h3>Today's log</h3>
+  <table id="logTable"><thead><tr><th>Period</th><th>Viol.</th><th>Best streak</th></tr></thead><tbody></tbody></table>
+  <button class="small" id="clearLog">Clear today's log</button>
+</div>
+
+<script>
+(function () {
+  const streakTimeEl = document.getElementById('streakTime');
+  const bestTimeEl = document.getElementById('bestTime');
+  const violationCountEl = document.getElementById('violationCount');
+  const eqEl = document.getElementById('eq');
+  const micBtn = document.getElementById('micBtn');
+  const statusPill = document.getElementById('statusPill');
+  const periodLabel = document.getElementById('periodLabel');
+  const limitInput = document.getElementById('limitInput');
+  const limitShown = document.getElementById('limitShown');
+  const resetBtn = document.getElementById('resetBtn');
+  const debugReadout = document.getElementById('debugReadout');
+  const logToggle = document.getElementById('logToggle');
+  const logDrawer = document.getElementById('logDrawer');
+  const logTableBody = document.querySelector('#logTable tbody');
+  const clearLogBtn = document.getElementById('clearLog');
+
+  const NUM_BARS = 26;
+  const bars = [];
+  for (let i = 0; i < NUM_BARS; i++) {
+    const d = document.createElement('div');
+    d.className = 'eqBar';
+    eqEl.appendChild(d);
+    bars.push(d);
+  }
+
+  let audioCtx, analyser, timeData, freqData, source, stream;
+  let rafId = null, tickerId = null;
+
+  const COOLDOWN_MS = 4000;
+  const WINDOW_MS = 90000;      // rolling window for the noise floor
+  const BOOTSTRAP_MS = 8000;    // learning period before counting starts
+  const SAMPLE_INTERVAL_MS = 150;
+
+  let levelBuffer = [];         // {t, level}
+  let sessionStart = 0;
+  let threshold = 50;
+  let smoothedLevel = 0;
+  let violationCount = 0;
+  let lastViolationTime = 0;
+  let streakStartTime = 0;
+  let bestStreakMs = 0;
+  let isListening = false;
+  let lastSampleTime = 0;
+
+  function volumeScale(rms) {
+    return Math.min(100, Math.round(rms * 100 * 3.2));
+  }
+
+  function fmtTime(ms) {
+    const totalSec = Math.floor(ms / 1000);
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return m + ':' + String(s).padStart(2, '0');
+  }
+
+  function recomputeThreshold() {
+    const now = Date.now();
+    levelBuffer = levelBuffer.filter(p => now - p.t <= WINDOW_MS);
+    if (levelBuffer.length < 10) return; // not enough data yet
+    const levels = levelBuffer.map(p => p.level).sort((a, b) => a - b);
+    const floorIdx = Math.floor(levels.length * 0.18);
+    const floor = levels[floorIdx];
+    const margin = Math.max(12, floor * 0.5);
+    threshold = Math.min(92, Math.max(18, Math.round(floor + margin)));
+  }
+
+  function updateViolationDisplay() {
+    violationCountEl.textContent = violationCount;
+    const limit = parseInt(limitInput.value, 10) || 2;
+    violationCountEl.classList.remove('amber', 'red');
+    if (violationCount >= limit) {
+      violationCountEl.classList.add('red');
+    } else if (violationCount === limit - 1 && limit > 1) {
+      violationCountEl.classList.add('amber');
+    }
+  }
+
+  function registerViolation() {
+    const now = Date.now();
+    if (now - lastViolationTime < COOLDOWN_MS) return;
+    if (now - sessionStart < BOOTSTRAP_MS) return; // still learning the room
+    lastViolationTime = now;
+    violationCount++;
+    updateViolationDisplay();
+    streakStartTime = now; // streak resets
+  }
+
+  function updateStreakDisplay() {
+    const now = Date.now();
+    const elapsed = now - streakStartTime;
+    if (elapsed > bestStreakMs) bestStreakMs = elapsed;
+    streakTimeEl.textContent = fmtTime(elapsed);
+    bestTimeEl.textContent = fmtTime(bestStreakMs);
+  }
+
+  function renderEQ() {
+    analyser.getByteFrequencyData(freqData);
+    const usableBins = Math.floor(freqData.length * 0.55); // focus on voice/noise range
+    const perBar = Math.max(1, Math.floor(usableBins / NUM_BARS));
+    const limit = parseInt(limitInput.value, 10) || 2;
+    const hot = violationCount >= limit;
+    for (let i = 0; i < NUM_BARS; i++) {
+      let sum = 0;
+      const start = i * perBar;
+      for (let j = 0; j < perBar; j++) sum += freqData[start + j] || 0;
+      const avg = sum / perBar; // 0-255
+      const pct = Math.min(100, Math.max(4, (avg / 255) * 130));
+      bars[i].style.height = pct + '%';
+      bars[i].classList.toggle('hot', hot);
+    }
+  }
+
+  function tick() {
+    analyser.getByteTimeDomainData(timeData);
+    let sumSquares = 0;
+    for (let i = 0; i < timeData.length; i++) {
+      const v = (timeData[i] - 128) / 128;
+      sumSquares += v * v;
+    }
+    const rms = Math.sqrt(sumSquares / timeData.length);
+    const level = volumeScale(rms);
+    smoothedLevel = smoothedLevel * 0.7 + level * 0.3;
+
+    const now = Date.now();
+    if (now - lastSampleTime >= SAMPLE_INTERVAL_MS) {
+      lastSampleTime = now;
+      levelBuffer.push({ t: now, level: smoothedLevel });
+      recomputeThreshold();
+    }
+
+    if (now - sessionStart < BOOTSTRAP_MS) {
+      statusPill.textContent = 'Learning the room…';
+      statusPill.className = 'learning';
+    } else {
+      statusPill.textContent = 'Listening';
+      statusPill.className = 'live';
+    }
+
+    debugReadout.textContent = 'level ' + Math.round(smoothedLevel) + ' · line ' + threshold;
+
+    if (smoothedLevel >= threshold) {
+      registerViolation();
+    }
+
+    renderEQ();
+    rafId = requestAnimationFrame(tick);
+  }
+
+  async function startMic() {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (err) {
+      statusPill.textContent = 'Mic access denied';
+      statusPill.className = 'off';
+      alert('This needs microphone access to work. Allow it in your browser, then click "Start listening" again.');
+      return;
+    }
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    timeData = new Uint8Array(analyser.fftSize);
+    freqData = new Uint8Array(analyser.frequencyBinCount);
+    source = audioCtx.createMediaStreamSource(stream);
+    source.connect(analyser);
+
+    sessionStart = Date.now();
+    streakStartTime = sessionStart;
+    lastSampleTime = 0;
+    levelBuffer = [];
+    isListening = true;
+
+    micBtn.textContent = 'Stop listening';
+    tick();
+    tickerId = setInterval(updateStreakDisplay, 500);
+  }
+
+  function stopMic() {
+    isListening = false;
+    if (rafId) cancelAnimationFrame(rafId);
+    if (tickerId) clearInterval(tickerId);
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    if (audioCtx) audioCtx.close();
+    statusPill.textContent = 'Mic off';
+    statusPill.className = 'off';
+    micBtn.textContent = 'Start listening';
+    debugReadout.textContent = '';
+    bars.forEach(b => { b.style.height = '4%'; b.classList.remove('hot'); });
+  }
+
+  micBtn.addEventListener('click', () => {
+    if (isListening) stopMic(); else startMic();
+  });
+
+  limitInput.addEventListener('input', () => {
+    limitShown.textContent = limitInput.value;
+    updateViolationDisplay();
+  });
+
+  function logPeriod() {
+    const key = 'noiseLog_' + new Date().toISOString().slice(0, 10);
+    const existing = JSON.parse(localStorage.getItem(key) || '[]');
+    existing.push({
+      period: periodLabel.value,
+      count: violationCount,
+      best: fmtTime(bestStreakMs)
+    });
+    localStorage.setItem(key, JSON.stringify(existing));
+    renderLog();
+  }
+
+  function renderLog() {
+    const key = 'noiseLog_' + new Date().toISOString().slice(0, 10);
+    const existing = JSON.parse(localStorage.getItem(key) || '[]');
+    logTableBody.innerHTML = '';
+    existing.forEach(row => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${row.period}</td><td>${row.count}</td><td>${row.best}</td>`;
+      logTableBody.appendChild(tr);
+    });
+  }
+
+  resetBtn.addEventListener('click', () => {
+    if (isListening) {
+      logPeriod();
+      violationCount = 0;
+      bestStreakMs = 0;
+      levelBuffer = [];
+      sessionStart = Date.now();
+      streakStartTime = sessionStart;
+      updateViolationDisplay();
+    }
+  });
+
+  logToggle.addEventListener('click', () => {
+    logDrawer.classList.toggle('show');
+    logToggle.textContent = logDrawer.classList.contains('show') ? 'log ▼' : 'log ▲';
+    if (logDrawer.classList.contains('show')) renderLog();
+  });
+
+  clearLogBtn.addEventListener('click', () => {
+    const key = 'noiseLog_' + new Date().toISOString().slice(0, 10);
+    localStorage.removeItem(key);
+    renderLog();
+  });
+
+  // init
+  updateViolationDisplay();
+  renderLog();
+
+  window.addEventListener('beforeunload', () => {
+    if (rafId) cancelAnimationFrame(rafId);
+    if (tickerId) clearInterval(tickerId);
+  });
+})();
+</script>
+</body>
+</html>
