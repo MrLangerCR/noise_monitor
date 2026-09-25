@@ -59,6 +59,23 @@
   #statusPill.live { color: var(--green); }
   #statusPill.learning { color: var(--gold); }
   #statusPill.off { color: #C97878; }
+  #statusPill.paused { color: #6C7EA3; }
+  #eq.paused { opacity: 0.35; }
+  #sensRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-dim);
+    font-size: 0.9rem;
+  }
+  #sensRow select {
+    background: var(--navy-mid);
+    color: var(--text);
+    border: 1px solid var(--navy-mid);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 0.9rem;
+  }
   #debugReadout {
     font-size: 0.7rem;
     color: #5A6B8C;
@@ -252,6 +269,15 @@
 
   <div id="controls">
     <button id="micBtn" class="primary">Start listening</button>
+    <button id="pauseBtn">Pause monitoring <span style="opacity:0.6">(P)</span></button>
+    <div id="sensRow">
+      Sensitivity:
+      <select id="sensSelect">
+        <option value="lenient">Lenient — allow chatting</option>
+        <option value="balanced" selected>Balanced</option>
+        <option value="strict">Strict</option>
+      </select>
+    </div>
     <div id="limitRow">
       Limit:
       <input id="limitInput" type="number" min="1" max="20" value="2">
@@ -275,6 +301,8 @@
   const violationCountEl = document.getElementById('violationCount');
   const eqEl = document.getElementById('eq');
   const micBtn = document.getElementById('micBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const sensSelect = document.getElementById('sensSelect');
   const statusPill = document.getElementById('statusPill');
   const periodLabel = document.getElementById('periodLabel');
   const limitInput = document.getElementById('limitInput');
@@ -298,10 +326,17 @@
   let audioCtx, analyser, timeData, freqData, source, stream;
   let rafId = null, tickerId = null;
 
-  const COOLDOWN_MS = 4000;
   const WINDOW_MS = 90000;      // rolling window for the noise floor
-  const BOOTSTRAP_MS = 8000;    // learning period before counting starts
+  const BOOTSTRAP_MS = 15000;   // learning period before counting starts
   const SAMPLE_INTERVAL_MS = 150;
+
+  const SENSITIVITY = {
+    lenient:  { marginBase: 18, marginMult: 1.0, sustainMs: 2500, cooldownMs: 5000, minThreshold: 30 },
+    balanced: { marginBase: 15, marginMult: 0.7, sustainMs: 1800, cooldownMs: 4000, minThreshold: 25 },
+    strict:   { marginBase: 10, marginMult: 0.4, sustainMs: 1000, cooldownMs: 3000, minThreshold: 20 }
+  };
+  let sensitivity = localStorage.getItem('noiseSensitivity') || 'balanced';
+  sensSelect.value = sensitivity;
 
   let levelBuffer = [];         // {t, level}
   let sessionStart = 0;
@@ -312,7 +347,9 @@
   let streakStartTime = 0;
   let bestStreakMs = 0;
   let isListening = false;
+  let isPaused = false;
   let lastSampleTime = 0;
+  let aboveSince = null;        // timestamp when level first crossed threshold, continuously
 
   function volumeScale(rms) {
     return Math.min(100, Math.round(rms * 100 * 3.2));
@@ -328,12 +365,13 @@
   function recomputeThreshold() {
     const now = Date.now();
     levelBuffer = levelBuffer.filter(p => now - p.t <= WINDOW_MS);
-    if (levelBuffer.length < 10) return; // not enough data yet
+    if (levelBuffer.length < 20) return; // not enough data yet
+    const cfg = SENSITIVITY[sensitivity];
     const levels = levelBuffer.map(p => p.level).sort((a, b) => a - b);
     const floorIdx = Math.floor(levels.length * 0.18);
     const floor = levels[floorIdx];
-    const margin = Math.max(12, floor * 0.5);
-    threshold = Math.min(92, Math.max(18, Math.round(floor + margin)));
+    const margin = Math.max(cfg.marginBase, floor * cfg.marginMult);
+    threshold = Math.min(92, Math.max(cfg.minThreshold, Math.round(floor + margin)));
   }
 
   function updateViolationDisplay() {
@@ -347,11 +385,21 @@
     }
   }
 
-  function registerViolation() {
-    const now = Date.now();
-    if (now - lastViolationTime < COOLDOWN_MS) return;
+  function evaluateLevel(level, now) {
+    const cfg = SENSITIVITY[sensitivity];
+    if (level >= threshold) {
+      if (aboveSince === null) aboveSince = now;
+    } else {
+      aboveSince = null;
+      return;
+    }
+    if (isPaused) return;
     if (now - sessionStart < BOOTSTRAP_MS) return; // still learning the room
+    if (now - lastViolationTime < cfg.cooldownMs) return;
+    if (now - aboveSince < cfg.sustainMs) return; // hasn't been sustained long enough yet
+
     lastViolationTime = now;
+    aboveSince = now; // avoid re-firing every frame while still loud
     violationCount++;
     updateViolationDisplay();
     streakStartTime = now; // streak resets
@@ -400,7 +448,10 @@
       recomputeThreshold();
     }
 
-    if (now - sessionStart < BOOTSTRAP_MS) {
+    if (isPaused) {
+      statusPill.textContent = 'Paused — not counting';
+      statusPill.className = 'paused';
+    } else if (now - sessionStart < BOOTSTRAP_MS) {
       statusPill.textContent = 'Learning the room…';
       statusPill.className = 'learning';
     } else {
@@ -410,11 +461,10 @@
 
     debugReadout.textContent = 'level ' + Math.round(smoothedLevel) + ' · line ' + threshold;
 
-    if (smoothedLevel >= threshold) {
-      registerViolation();
-    }
+    evaluateLevel(smoothedLevel, now);
 
     renderEQ();
+    eqEl.classList.toggle('paused', isPaused);
     rafId = requestAnimationFrame(tick);
   }
 
@@ -439,7 +489,10 @@
     streakStartTime = sessionStart;
     lastSampleTime = 0;
     levelBuffer = [];
+    aboveSince = null;
     isListening = true;
+    isPaused = false;
+    pauseBtn.textContent = 'Pause monitoring (P)';
 
     micBtn.textContent = 'Stop listening';
     tick();
@@ -461,6 +514,25 @@
 
   micBtn.addEventListener('click', () => {
     if (isListening) stopMic(); else startMic();
+  });
+
+  function togglePause() {
+    if (!isListening) return;
+    isPaused = !isPaused;
+    aboveSince = null;
+    pauseBtn.textContent = isPaused ? 'Resume monitoring (P)' : 'Pause monitoring (P)';
+    pauseBtn.classList.toggle('primary', isPaused);
+  }
+  pauseBtn.addEventListener('click', togglePause);
+  window.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() === 'p' && document.activeElement.tagName !== 'INPUT') {
+      togglePause();
+    }
+  });
+
+  sensSelect.addEventListener('change', () => {
+    sensitivity = sensSelect.value;
+    localStorage.setItem('noiseSensitivity', sensitivity);
   });
 
   limitInput.addEventListener('input', () => {
@@ -497,6 +569,10 @@
       violationCount = 0;
       bestStreakMs = 0;
       levelBuffer = [];
+      aboveSince = null;
+      isPaused = false;
+      pauseBtn.textContent = 'Pause monitoring (P)';
+      pauseBtn.classList.remove('primary');
       sessionStart = Date.now();
       streakStartTime = sessionStart;
       updateViolationDisplay();
