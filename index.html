@@ -76,6 +76,15 @@
     padding: 6px 8px;
     font-size: 0.9rem;
   }
+  #gainRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-dim);
+    font-size: 0.9rem;
+  }
+  #gainRow input[type="range"] { width: 90px; }
+  #gainValue { min-width: 34px; text-align: right; }
   #debugReadout {
     font-size: 0.7rem;
     color: #5A6B8C;
@@ -273,10 +282,16 @@
     <div id="sensRow">
       Sensitivity:
       <select id="sensSelect">
+        <option value="auto" selected>Auto — adjusts itself</option>
         <option value="lenient">Lenient — allow chatting</option>
-        <option value="balanced" selected>Balanced</option>
-        <option value="strict">Strict</option>
+        <option value="balanced">Balanced (manual)</option>
+        <option value="strict">Strict (manual)</option>
       </select>
+    </div>
+    <div id="gainRow">
+      Mic gain:
+      <input type="range" id="gainSlider" min="0.5" max="3" step="0.1" value="1.5">
+      <span id="gainValue">1.5x</span>
     </div>
     <div id="limitRow">
       Limit:
@@ -303,6 +318,8 @@
   const micBtn = document.getElementById('micBtn');
   const pauseBtn = document.getElementById('pauseBtn');
   const sensSelect = document.getElementById('sensSelect');
+  const gainSlider = document.getElementById('gainSlider');
+  const gainValue = document.getElementById('gainValue');
   const statusPill = document.getElementById('statusPill');
   const periodLabel = document.getElementById('periodLabel');
   const limitInput = document.getElementById('limitInput');
@@ -326,17 +343,78 @@
   let audioCtx, analyser, timeData, freqData, source, stream;
   let rafId = null, tickerId = null;
 
-  const WINDOW_MS = 90000;      // rolling window for the noise floor
-  const BOOTSTRAP_MS = 15000;   // learning period before counting starts
+  const WINDOW_MS = 45000;      // rolling window for the noise floor — reacts faster than before
+  const BOOTSTRAP_MS = 8000;    // learning period before counting starts
   const SAMPLE_INTERVAL_MS = 150;
 
+  // marginMult is deliberately small: in a chronically loud room the "quiet 18%"
+  // floor is itself elevated, and a big proportional margin was rewarding that
+  // with a threshold that never got crossed. maxThreshold puts a hard ceiling
+  // on how far the line can drift no matter how the floor behaves.
   const SENSITIVITY = {
-    lenient:  { marginBase: 18, marginMult: 1.0, sustainMs: 2500, cooldownMs: 5000, minThreshold: 30 },
-    balanced: { marginBase: 15, marginMult: 0.7, sustainMs: 1800, cooldownMs: 4000, minThreshold: 25 },
-    strict:   { marginBase: 10, marginMult: 0.4, sustainMs: 1000, cooldownMs: 3000, minThreshold: 20 }
+    lenient:  { marginBase: 15, marginMult: 0.25, sustainMs: 2000, cooldownMs: 4000, minThreshold: 25, maxThreshold: 70 },
+    balanced: { marginBase: 10, marginMult: 0.15, sustainMs: 1200, cooldownMs: 3500, minThreshold: 20, maxThreshold: 58 },
+    strict:   { marginBase: 6,  marginMult: 0.08, sustainMs: 700,  cooldownMs: 3000, minThreshold: 15, maxThreshold: 48 }
   };
-  let sensitivity = localStorage.getItem('noiseSensitivity') || 'balanced';
+  let sensitivity = localStorage.getItem('noiseSensitivity') || 'auto';
   sensSelect.value = sensitivity;
+
+  let micGain = parseFloat(localStorage.getItem('noiseMicGain')) || 1.5;
+  gainSlider.value = micGain;
+  gainValue.textContent = micGain.toFixed(1) + 'x';
+
+  // Auto mode: a continuous "how strict right now" dial, not a fixed preset.
+  // 1.0 = Balanced (the resting/rewarded state), 2.0 = Strict, up to 3.0 = beyond
+  // Strict for a class that stays loud. Interpolated/extrapolated from the same
+  // three anchor presets so the math stays consistent with manual mode.
+  let autoLevel = 1.0;
+  let violationTimes = []; // recent violation timestamps, for auto-adaptation
+
+  function interpAt(level) {
+    const L = SENSITIVITY.lenient, B = SENSITIVITY.balanced, S = SENSITIVITY.strict;
+    function seg(key) {
+      if (level <= 1) {
+        const t = level; // 0 (lenient) .. 1 (balanced)
+        return L[key] + (B[key] - L[key]) * t;
+      } else {
+        const t = level - 1; // 0 (balanced) .. 2 (strict, extrapolated beyond)
+        return B[key] + (S[key] - B[key]) * t;
+      }
+    }
+    const minThreshold = Math.max(8, seg('minThreshold'));
+    return {
+      marginBase: Math.max(2, seg('marginBase')),
+      marginMult: Math.max(0.02, seg('marginMult')),
+      sustainMs: Math.max(300, seg('sustainMs')),
+      cooldownMs: Math.max(1200, seg('cooldownMs')),
+      minThreshold: minThreshold,
+      maxThreshold: Math.max(minThreshold + 8, seg('maxThreshold'))
+    };
+  }
+
+  function currentCfg() {
+    return sensitivity === 'auto' ? interpAt(autoLevel) : SENSITIVITY[sensitivity];
+  }
+
+  function autoTierLabel(level) {
+    if (level < 1.15) return 'Balanced';
+    if (level < 1.7) return 'Firm';
+    if (level < 2.4) return 'Strict';
+    return 'Max';
+  }
+
+  function adaptAutoLevel(now) {
+    if (sensitivity !== 'auto') return;
+    if (isPaused || now - sessionStart < BOOTSTRAP_MS) return;
+    violationTimes = violationTimes.filter(t => now - t <= 60000);
+    const recentCount = violationTimes.length;
+    const quietMs = now - streakStartTime;
+    if (recentCount >= 2) {
+      autoLevel = Math.min(3.0, autoLevel + 0.15);
+    } else if (recentCount === 0 && quietMs > 30000) {
+      autoLevel = Math.max(1.0, autoLevel - 0.1);
+    }
+  }
 
   let levelBuffer = [];         // {t, level}
   let sessionStart = 0;
@@ -366,12 +444,12 @@
     const now = Date.now();
     levelBuffer = levelBuffer.filter(p => now - p.t <= WINDOW_MS);
     if (levelBuffer.length < 20) return; // not enough data yet
-    const cfg = SENSITIVITY[sensitivity];
+    const cfg = currentCfg();
     const levels = levelBuffer.map(p => p.level).sort((a, b) => a - b);
     const floorIdx = Math.floor(levels.length * 0.18);
     const floor = levels[floorIdx];
     const margin = Math.max(cfg.marginBase, floor * cfg.marginMult);
-    threshold = Math.min(92, Math.max(cfg.minThreshold, Math.round(floor + margin)));
+    threshold = Math.min(cfg.maxThreshold, Math.max(cfg.minThreshold, Math.round(floor + margin)));
   }
 
   function updateViolationDisplay() {
@@ -386,7 +464,7 @@
   }
 
   function evaluateLevel(level, now) {
-    const cfg = SENSITIVITY[sensitivity];
+    const cfg = currentCfg();
     if (level >= threshold) {
       if (aboveSince === null) aboveSince = now;
     } else {
@@ -401,6 +479,7 @@
     lastViolationTime = now;
     aboveSince = now; // avoid re-firing every frame while still loud
     violationCount++;
+    violationTimes.push(now);
     updateViolationDisplay();
     streakStartTime = now; // streak resets
   }
@@ -411,6 +490,7 @@
     if (elapsed > bestStreakMs) bestStreakMs = elapsed;
     streakTimeEl.textContent = fmtTime(elapsed);
     bestTimeEl.textContent = fmtTime(bestStreakMs);
+    adaptAutoLevel(now);
   }
 
   function renderEQ() {
@@ -438,7 +518,7 @@
       sumSquares += v * v;
     }
     const rms = Math.sqrt(sumSquares / timeData.length);
-    const level = volumeScale(rms);
+    const level = volumeScale(rms * micGain);
     smoothedLevel = smoothedLevel * 0.7 + level * 0.3;
 
     const now = Date.now();
@@ -459,7 +539,8 @@
       statusPill.className = 'live';
     }
 
-    debugReadout.textContent = 'level ' + Math.round(smoothedLevel) + ' · line ' + threshold;
+    const tierText = sensitivity === 'auto' ? (' · ' + autoTierLabel(autoLevel)) : '';
+    debugReadout.textContent = 'level ' + Math.round(smoothedLevel) + ' · line ' + threshold + tierText;
 
     evaluateLevel(smoothedLevel, now);
 
@@ -490,6 +571,8 @@
     lastSampleTime = 0;
     levelBuffer = [];
     aboveSince = null;
+    autoLevel = 1.0;
+    violationTimes = [];
     isListening = true;
     isPaused = false;
     pauseBtn.textContent = 'Pause monitoring (P)';
@@ -535,6 +618,12 @@
     localStorage.setItem('noiseSensitivity', sensitivity);
   });
 
+  gainSlider.addEventListener('input', () => {
+    micGain = parseFloat(gainSlider.value);
+    gainValue.textContent = micGain.toFixed(1) + 'x';
+    localStorage.setItem('noiseMicGain', micGain);
+  });
+
   limitInput.addEventListener('input', () => {
     limitShown.textContent = limitInput.value;
     updateViolationDisplay();
@@ -570,6 +659,8 @@
       bestStreakMs = 0;
       levelBuffer = [];
       aboveSince = null;
+      autoLevel = 1.0;
+      violationTimes = [];
       isPaused = false;
       pauseBtn.textContent = 'Pause monitoring (P)';
       pauseBtn.classList.remove('primary');
