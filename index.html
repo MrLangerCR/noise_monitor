@@ -40,15 +40,58 @@
   #topbar-left { display: flex; align-items: center; gap: 14px; }
   #periodLabel {
     font-family: Georgia, 'Times New Roman', serif;
-    font-size: 1.5rem;
-    color: var(--text-dim);
-    background: transparent;
-    border: none;
-    border-bottom: 2px solid var(--navy-mid);
-    padding: 4px 2px;
-    width: 200px;
+    font-size: 1.3rem;
+    color: var(--text);
+    background: var(--navy-mid);
+    border: 1px solid var(--navy-light);
+    border-radius: 7px;
+    padding: 7px 12px;
+    width: 210px;
+    cursor: text;
   }
-  #periodLabel:focus { outline: none; border-bottom-color: var(--gold); }
+  #periodLabel::placeholder { color: var(--text-dim); opacity: 0.8; }
+  #periodLabel:focus { outline: none; border-color: var(--gold); background: var(--navy-light); }
+
+  /* ---- Warning banner ---- */
+  #warningBanner {
+    flex-shrink: 0;
+    text-align: center;
+    font-weight: 700;
+    border-radius: 10px;
+    margin: 0 auto 0;
+    max-width: 700px;
+    width: 100%;
+    opacity: 0;
+    max-height: 0;
+    padding: 0 16px;
+    overflow: hidden;
+    transition: opacity 0.25s ease, max-height 0.25s ease, padding 0.25s ease;
+  }
+  #warningBanner.show { opacity: 1; max-height: 90px; padding: 12px 16px; margin-bottom: 1.5vh; }
+  #warningBanner.mild { background: rgba(227,168,87,0.16); color: var(--gold); border: 1px solid rgba(227,168,87,0.45); font-size: 1.15rem; }
+  #warningBanner.severe { background: rgba(214,69,69,0.2); color: #FF9D9D; border: 1px solid rgba(214,69,69,0.55); font-size: 1.2rem; animation: bannerPulse 1s ease-in-out infinite; }
+  #warningBanner.demeritWarn { background: rgba(227,168,87,0.26); color: #FFD9A0; border: 1px solid var(--gold); font-size: 1.4rem; }
+  #warningBanner.demeritFinal { background: rgba(214,69,69,0.32); color: #FFFFFF; border: 2px solid var(--red); font-size: 1.7rem; animation: bannerPulse 1s ease-in-out infinite; }
+  @keyframes bannerPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.015); } }
+
+  /* ---- Toast ---- */
+  #toast {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-12px);
+    background: var(--navy-mid);
+    color: var(--text);
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    z-index: 30;
+    border: 1px solid var(--gold);
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   #statusPill {
     font-size: 0.9rem;
     padding: 6px 14px;
@@ -134,9 +177,7 @@
     color: var(--green);
     transition: color 0.25s ease, transform 0.15s ease;
   }
-  #violationCount.amber { color: var(--gold); }
-  #violationCount.red {
-    color: var(--red);
+  #violationCount.maxed {
     animation: pulse 0.9s ease-in-out infinite;
   }
   @keyframes pulse {
@@ -144,6 +185,13 @@
     50% { transform: scale(1.05); }
   }
   #violationCaption { font-size: 1rem; color: var(--text-dim); margin-top: 0.3vh; }
+  #recordTag {
+    display: none;
+    font-size: 0.95rem;
+    color: var(--gold);
+    font-weight: 700;
+    margin-top: 0.4vh;
+  }
 
   /* ---- EQ visualizer ---- */
   #eqWrap {
@@ -201,22 +249,23 @@
     font-weight: 700;
     border-color: var(--gold);
   }
-  #limitRow {
+  #threshRow {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     color: var(--text-dim);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
   }
-  #limitRow input {
-    width: 46px;
+  #threshRow .tgroup { display: flex; align-items: center; gap: 4px; }
+  #threshRow input {
+    width: 42px;
     text-align: center;
     background: var(--navy-mid);
     color: var(--text);
     border: 1px solid var(--navy-mid);
     border-radius: 6px;
     padding: 4px;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
   }
 
   /* ---- Log drawer ---- */
@@ -247,6 +296,8 @@
   #logDrawer h3 { margin: 0 0 10px; font-family: Georgia, serif; color: var(--gold); font-size: 1.1rem; }
   #logDrawer table { width: 100%; border-collapse: collapse; }
   #logDrawer td, #logDrawer th { padding: 4px 6px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  #logDrawer td:first-child { width: 28px; }
+  #logDrawer tr:first-child td { color: var(--gold); font-weight: 700; }
   #logDrawer button.small { font-size: 0.75rem; padding: 4px 8px; margin-top: 10px; }
 </style>
 </head>
@@ -254,21 +305,25 @@
 <div id="app">
   <div id="topbar">
     <div id="topbar-left">
-      <input id="periodLabel" value="Period 1" spellcheck="false">
+      <input id="periodLabel" value="" placeholder="✎ Period name (e.g. Period 3)" spellcheck="false">
       <div id="statusPill" class="off">Mic off</div>
     </div>
     <div id="debugReadout"></div>
   </div>
 
+  <div id="warningBanner"><span id="warningText"></span></div>
+
   <div id="hero">
     <div id="streakBlock">
       <div id="streakTime">0:00</div>
       <div id="streakLabel">quiet streak</div>
-      <div id="streakBest">best today: <b id="bestTime">0:00</b></div>
+      <div id="streakBest">today's best: <b id="bestTime">0:00</b></div>
+      <div id="streakBest">all-time best: <b id="allTimeBestTime">0:00</b></div>
+      <div id="recordTag">🔥 New ALL-TIME record!</div>
     </div>
     <div id="violationBlock">
       <div id="violationCount">0</div>
-      <div id="violationCaption">violations · limit <span id="limitShown">2</span></div>
+      <div id="violationCaption">strikes</div>
     </div>
   </div>
 
@@ -293,20 +348,26 @@
       <input type="range" id="gainSlider" min="0.5" max="3" step="0.1" value="1.5">
       <span id="gainValue">1.5x</span>
     </div>
-    <div id="limitRow">
-      Limit:
-      <input id="limitInput" type="number" min="1" max="20" value="2">
-      <span>per class</span>
+    <div id="threshRow">
+      <div class="tgroup">Red at <input id="redMaxInput" type="number" min="2" max="100" value="20"></div>
+      <div class="tgroup">Dark red at <input id="darkStartInput" type="number" min="2" max="150" value="30"></div>
+      <div class="tgroup">Warn at <input id="warnAtInput" type="number" min="2" max="200" value="40"></div>
+      <div class="tgroup">Demerit at <input id="demeritAtInput" type="number" min="2" max="300" value="50"></div>
     </div>
-    <button id="resetBtn">New period</button>
+    <button id="resetBtn">End Period</button>
   </div>
 </div>
 
-<button id="logToggle">log ▲</button>
+<div id="toast"></div>
+
+<button id="logToggle">leaderboard ▲</button>
 <div id="logDrawer">
-  <h3>Today's log</h3>
-  <table id="logTable"><thead><tr><th>Period</th><th>Viol.</th><th>Best streak</th></tr></thead><tbody></tbody></table>
-  <button class="small" id="clearLog">Clear today's log</button>
+  <h3>🏆 Today's Leaderboard — Best Streaks</h3>
+  <table id="logTable"><thead><tr><th></th><th>Period</th><th>Best</th><th>Strikes</th></tr></thead><tbody></tbody></table>
+  <button class="small" id="clearLog">Clear today's leaderboard</button>
+
+  <h3 style="margin-top:18px;">⭐ All-Time Top 10</h3>
+  <table id="allTimeTable"><thead><tr><th></th><th>Date</th><th>Period</th><th>Best</th></tr></thead><tbody id="allTimeTableBody"></tbody></table>
 </div>
 
 <script>
@@ -322,14 +383,22 @@
   const gainValue = document.getElementById('gainValue');
   const statusPill = document.getElementById('statusPill');
   const periodLabel = document.getElementById('periodLabel');
-  const limitInput = document.getElementById('limitInput');
-  const limitShown = document.getElementById('limitShown');
+  const redMaxInput = document.getElementById('redMaxInput');
+  const darkStartInput = document.getElementById('darkStartInput');
+  const warnAtInput = document.getElementById('warnAtInput');
+  const demeritAtInput = document.getElementById('demeritAtInput');
+  const allTimeBestTimeEl = document.getElementById('allTimeBestTime');
+  const allTimeTableBody = document.getElementById('allTimeTableBody');
   const resetBtn = document.getElementById('resetBtn');
   const debugReadout = document.getElementById('debugReadout');
   const logToggle = document.getElementById('logToggle');
   const logDrawer = document.getElementById('logDrawer');
   const logTableBody = document.querySelector('#logTable tbody');
   const clearLogBtn = document.getElementById('clearLog');
+  const warningBanner = document.getElementById('warningBanner');
+  const warningText = document.getElementById('warningText');
+  const toastEl = document.getElementById('toast');
+  const recordTagEl = document.getElementById('recordTag');
 
   const NUM_BARS = 26;
   const bars = [];
@@ -403,6 +472,97 @@
     return 'Max';
   }
 
+  // ---- Strike display thresholds (separate from audio detection above) ----
+  let redMax = parseInt(localStorage.getItem('noiseRedMax'), 10) || 20;
+  let darkStart = parseInt(localStorage.getItem('noiseDarkStart'), 10) || 30;
+  let warnAt = parseInt(localStorage.getItem('noiseWarnAt'), 10) || 40;
+  let demeritAt = parseInt(localStorage.getItem('noiseDemeritAt'), 10) || 50;
+  redMaxInput.value = redMax;
+  darkStartInput.value = darkStart;
+  warnAtInput.value = warnAt;
+  demeritAtInput.value = demeritAt;
+
+  function violationColor(count) {
+    const t = Math.min(1, count / redMax);
+    let hue, lightness = 52;
+    if (t <= 0.5) {
+      hue = 135 - (135 - 55) * (t / 0.5);   // green -> yellow
+    } else {
+      hue = 55 - 55 * ((t - 0.5) / 0.5);    // yellow -> red
+    }
+    if (count >= redMax) hue = 0;           // fully red from redMax onward
+    if (count > darkStart) {
+      const span = Math.max(1, demeritAt - darkStart);
+      const darkT = Math.min(1, (count - darkStart) / span);
+      lightness = 52 - (52 - 26) * darkT;   // deepens toward near-black red by demeritAt
+      hue = 0;
+    }
+    return `hsl(${hue}, 72%, ${lightness}%)`;
+  }
+
+  let dailyRecordMs = 0;
+  function computeDailyRecordMs() {
+    const key = 'noiseLog_' + new Date().toISOString().slice(0, 10);
+    const existing = JSON.parse(localStorage.getItem(key) || '[]');
+    dailyRecordMs = existing.reduce((m, r) => Math.max(m, r.bestMs || 0), 0);
+  }
+
+  // All-time store: separate from the daily log, never auto-cleared by "Clear
+  // today's leaderboard". Lives in this browser's localStorage only — see
+  // chat notes on GitHub Pages / static hosting for what that does and doesn't cover.
+  const ALL_TIME_KEY = 'noiseAllTime';
+  const MAX_ALLTIME_ENTRIES = 1000;
+  let allTimeRecordMs = 0;
+  function computeAllTimeRecordMs() {
+    const existing = JSON.parse(localStorage.getItem(ALL_TIME_KEY) || '[]');
+    allTimeRecordMs = existing.reduce((m, r) => Math.max(m, r.bestMs || 0), 0);
+  }
+  function renderAllTimeLeaderboard() {
+    const existing = JSON.parse(localStorage.getItem(ALL_TIME_KEY) || '[]');
+    const top = existing.slice().sort((a, b) => (b.bestMs || 0) - (a.bestMs || 0)).slice(0, 10);
+    allTimeTableBody.innerHTML = '';
+    top.forEach((row, i) => {
+      const rank = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '.';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${rank}</td><td>${row.date || ''}</td><td>${row.period}</td><td>${row.best}</td>`;
+      allTimeTableBody.appendChild(tr);
+    });
+  }
+
+  let toastTimer = null;
+  function showToast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
+  }
+
+  function clearWarningBanner() {
+    warningBanner.className = '';
+    warningText.textContent = '';
+  }
+
+  function updateWarningBanner(now) {
+    const win45 = violationTimes.filter(t => now - t <= 45000).length;
+    const win60 = violationTimes.filter(t => now - t <= 60000).length;
+    let cls = null, text = null;
+    if (violationCount >= demeritAt) {
+      cls = 'demeritFinal'; text = 'Class demerit for noise';
+    } else if (violationCount >= warnAt) {
+      cls = 'demeritWarn'; text = '⚠ Warning: close to a class demerit for noise';
+    } else if (win60 >= 4) {
+      cls = 'severe'; text = 'Being quiet will stop the strikes';
+    } else if (win45 >= 2) {
+      cls = 'mild'; text = 'Lower your volume';
+    }
+    if (cls) {
+      warningBanner.className = 'show ' + cls;
+      warningText.textContent = text;
+    } else {
+      clearWarningBanner();
+    }
+  }
+
   function adaptAutoLevel(now) {
     if (sensitivity !== 'auto') return;
     if (isPaused || now - sessionStart < BOOTSTRAP_MS) return;
@@ -454,13 +614,8 @@
 
   function updateViolationDisplay() {
     violationCountEl.textContent = violationCount;
-    const limit = parseInt(limitInput.value, 10) || 2;
-    violationCountEl.classList.remove('amber', 'red');
-    if (violationCount >= limit) {
-      violationCountEl.classList.add('red');
-    } else if (violationCount === limit - 1 && limit > 1) {
-      violationCountEl.classList.add('amber');
-    }
+    violationCountEl.style.color = violationColor(violationCount);
+    violationCountEl.classList.toggle('maxed', violationCount >= redMax);
   }
 
   function evaluateLevel(level, now) {
@@ -489,7 +644,11 @@
     const elapsed = now - streakStartTime;
     if (elapsed > bestStreakMs) bestStreakMs = elapsed;
     streakTimeEl.textContent = fmtTime(elapsed);
-    bestTimeEl.textContent = fmtTime(bestStreakMs);
+    const combinedBest = Math.max(dailyRecordMs, bestStreakMs);
+    bestTimeEl.textContent = fmtTime(combinedBest);
+    const combinedAllTime = Math.max(allTimeRecordMs, bestStreakMs);
+    allTimeBestTimeEl.textContent = fmtTime(combinedAllTime);
+    recordTagEl.style.display = (allTimeRecordMs > 0 && elapsed > allTimeRecordMs) ? 'block' : 'none';
     adaptAutoLevel(now);
   }
 
@@ -497,8 +656,7 @@
     analyser.getByteFrequencyData(freqData);
     const usableBins = Math.floor(freqData.length * 0.55); // focus on voice/noise range
     const perBar = Math.max(1, Math.floor(usableBins / NUM_BARS));
-    const limit = parseInt(limitInput.value, 10) || 2;
-    const hot = violationCount >= limit;
+    const hot = smoothedLevel >= threshold;
     for (let i = 0; i < NUM_BARS; i++) {
       let sum = 0;
       const start = i * perBar;
@@ -543,6 +701,7 @@
     debugReadout.textContent = 'level ' + Math.round(smoothedLevel) + ' · line ' + threshold + tierText;
 
     evaluateLevel(smoothedLevel, now);
+    updateWarningBanner(now);
 
     renderEQ();
     eqEl.classList.toggle('paused', isPaused);
@@ -576,11 +735,16 @@
     isListening = true;
     isPaused = false;
     pauseBtn.textContent = 'Pause monitoring (P)';
+    clearWarningBanner();
+    computeDailyRecordMs();
+    computeAllTimeRecordMs();
 
     micBtn.textContent = 'Stop listening';
     tick();
     tickerId = setInterval(updateStreakDisplay, 500);
   }
+
+  periodLabel.addEventListener('focus', () => periodLabel.select());
 
   function stopMic() {
     isListening = false;
@@ -624,67 +788,111 @@
     localStorage.setItem('noiseMicGain', micGain);
   });
 
-  limitInput.addEventListener('input', () => {
-    limitShown.textContent = limitInput.value;
+  redMaxInput.addEventListener('input', () => {
+    redMax = Math.max(2, parseInt(redMaxInput.value, 10) || 20);
+    localStorage.setItem('noiseRedMax', redMax);
     updateViolationDisplay();
   });
+  darkStartInput.addEventListener('input', () => {
+    darkStart = Math.max(2, parseInt(darkStartInput.value, 10) || 30);
+    localStorage.setItem('noiseDarkStart', darkStart);
+    updateViolationDisplay();
+  });
+  warnAtInput.addEventListener('input', () => {
+    warnAt = Math.max(2, parseInt(warnAtInput.value, 10) || 30);
+    localStorage.setItem('noiseWarnAt', warnAt);
+  });
+  demeritAtInput.addEventListener('input', () => {
+    demeritAt = Math.max(2, parseInt(demeritAtInput.value, 10) || 50);
+    localStorage.setItem('noiseDemeritAt', demeritAt);
+  });
 
-  function logPeriod() {
-    const key = 'noiseLog_' + new Date().toISOString().slice(0, 10);
+  function logPeriod(label) {
+    const today = new Date().toISOString().slice(0, 10);
+    const key = 'noiseLog_' + today;
     const existing = JSON.parse(localStorage.getItem(key) || '[]');
-    existing.push({
-      period: periodLabel.value,
+    const entry = {
+      period: label,
       count: violationCount,
+      bestMs: bestStreakMs,
       best: fmtTime(bestStreakMs)
-    });
+    };
+    existing.push(entry);
     localStorage.setItem(key, JSON.stringify(existing));
     renderLog();
+    computeDailyRecordMs();
+
+    let allTime = JSON.parse(localStorage.getItem(ALL_TIME_KEY) || '[]');
+    allTime.push({ ...entry, date: today });
+    if (allTime.length > MAX_ALLTIME_ENTRIES) {
+      allTime = allTime.slice(allTime.length - MAX_ALLTIME_ENTRIES);
+    }
+    localStorage.setItem(ALL_TIME_KEY, JSON.stringify(allTime));
+    renderAllTimeLeaderboard();
+    computeAllTimeRecordMs();
   }
 
   function renderLog() {
     const key = 'noiseLog_' + new Date().toISOString().slice(0, 10);
     const existing = JSON.parse(localStorage.getItem(key) || '[]');
+    const sorted = existing.slice().sort((a, b) => (b.bestMs || 0) - (a.bestMs || 0));
     logTableBody.innerHTML = '';
-    existing.forEach(row => {
+    sorted.forEach((row, i) => {
+      const rank = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '.';
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${row.period}</td><td>${row.count}</td><td>${row.best}</td>`;
+      tr.innerHTML = `<td>${rank}</td><td>${row.period}</td><td>${row.best}</td><td>${row.count}</td>`;
       logTableBody.appendChild(tr);
     });
   }
 
+  let endingPeriod = false;
   resetBtn.addEventListener('click', () => {
-    if (isListening) {
-      logPeriod();
-      violationCount = 0;
-      bestStreakMs = 0;
-      levelBuffer = [];
-      aboveSince = null;
-      autoLevel = 1.0;
-      violationTimes = [];
-      isPaused = false;
-      pauseBtn.textContent = 'Pause monitoring (P)';
-      pauseBtn.classList.remove('primary');
-      sessionStart = Date.now();
-      streakStartTime = sessionStart;
-      updateViolationDisplay();
+    if (endingPeriod) return;
+    endingPeriod = true;
+    setTimeout(() => { endingPeriod = false; }, 800);
+
+    if (!isListening) {
+      showToast('Start listening before ending a period.');
+      return;
     }
+    const label = (periodLabel.value || '').trim() || 'Unnamed period';
+    logPeriod(label);
+    violationCount = 0;
+    bestStreakMs = 0;
+    levelBuffer = [];
+    aboveSince = null;
+    autoLevel = 1.0;
+    violationTimes = [];
+    isPaused = false;
+    pauseBtn.textContent = 'Pause monitoring (P)';
+    pauseBtn.classList.remove('primary');
+    sessionStart = Date.now();
+    streakStartTime = sessionStart;
+    updateViolationDisplay();
+    clearWarningBanner();
+    recordTagEl.style.display = 'none';
+    showToast('Period logged ✓ — ' + label);
   });
 
   logToggle.addEventListener('click', () => {
     logDrawer.classList.toggle('show');
-    logToggle.textContent = logDrawer.classList.contains('show') ? 'log ▼' : 'log ▲';
+    logToggle.textContent = logDrawer.classList.contains('show') ? 'leaderboard ▼' : 'leaderboard ▲';
     if (logDrawer.classList.contains('show')) renderLog();
   });
 
   clearLogBtn.addEventListener('click', () => {
     const key = 'noiseLog_' + new Date().toISOString().slice(0, 10);
     localStorage.removeItem(key);
+    dailyRecordMs = 0;
     renderLog();
   });
 
   // init
   updateViolationDisplay();
+  computeDailyRecordMs();
   renderLog();
+  computeAllTimeRecordMs();
+  renderAllTimeLeaderboard();
 
   window.addEventListener('beforeunload', () => {
     if (rafId) cancelAnimationFrame(rafId);
