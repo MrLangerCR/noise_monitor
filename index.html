@@ -27,7 +27,8 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
-    padding: 2.5vh 4vw 3vh;
+    padding: 2vh 3vw 2.2vh;
+    gap: 1.2vh;
   }
 
   /* ---- Top bar ---- */
@@ -38,63 +39,23 @@
     flex-shrink: 0;
   }
   #topbar-left { display: flex; align-items: center; gap: 14px; }
+  #topbar-right { display: flex; align-items: center; gap: 14px; }
   #periodLabel {
     font-family: Georgia, 'Times New Roman', serif;
-    font-size: 1.3rem;
+    font-size: 1.25rem;
     color: var(--text);
     background: var(--navy-mid);
     border: 1px solid var(--navy-light);
     border-radius: 7px;
     padding: 7px 12px;
-    width: 210px;
+    width: 200px;
     cursor: text;
   }
   #periodLabel::placeholder { color: var(--text-dim); opacity: 0.8; }
   #periodLabel:focus { outline: none; border-color: var(--gold); background: var(--navy-light); }
-
-  /* ---- Warning banner ---- */
-  #warningBanner {
-    flex-shrink: 0;
-    text-align: center;
-    font-weight: 700;
-    border-radius: 10px;
-    margin: 0 auto 0;
-    max-width: 700px;
-    width: 100%;
-    opacity: 0;
-    max-height: 0;
-    padding: 0 16px;
-    overflow: hidden;
-    transition: opacity 0.25s ease, max-height 0.25s ease, padding 0.25s ease;
-  }
-  #warningBanner.show { opacity: 1; max-height: 90px; padding: 12px 16px; margin-bottom: 1.5vh; }
-  #warningBanner.mild { background: rgba(227,168,87,0.16); color: var(--gold); border: 1px solid rgba(227,168,87,0.45); font-size: 1.15rem; }
-  #warningBanner.severe { background: rgba(214,69,69,0.2); color: #FF9D9D; border: 1px solid rgba(214,69,69,0.55); font-size: 1.2rem; animation: bannerPulse 1s ease-in-out infinite; }
-  #warningBanner.demeritWarn { background: rgba(227,168,87,0.26); color: #FFD9A0; border: 1px solid var(--gold); font-size: 1.4rem; }
-  #warningBanner.demeritFinal { background: rgba(214,69,69,0.32); color: #FFFFFF; border: 2px solid var(--red); font-size: 1.7rem; animation: bannerPulse 1s ease-in-out infinite; }
-  @keyframes bannerPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.015); } }
-
-  /* ---- Toast ---- */
-  #toast {
-    position: fixed;
-    top: 16px;
-    left: 50%;
-    transform: translateX(-50%) translateY(-12px);
-    background: var(--navy-mid);
-    color: var(--text);
-    padding: 10px 18px;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.25s ease, transform 0.25s ease;
-    z-index: 30;
-    border: 1px solid var(--gold);
-  }
-  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   #statusPill {
-    font-size: 0.9rem;
-    padding: 6px 14px;
+    font-size: 0.85rem;
+    padding: 6px 13px;
     border-radius: 999px;
     background: var(--navy-mid);
     color: var(--text-dim);
@@ -104,108 +65,109 @@
   #statusPill.off { color: #C97878; }
   #statusPill.paused { color: #6C7EA3; }
   #eq.paused { opacity: 0.35; }
-  #sensRow {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--text-dim);
-    font-size: 0.9rem;
-  }
-  #sensRow select {
-    background: var(--navy-mid);
-    color: var(--text);
-    border: 1px solid var(--navy-mid);
-    border-radius: 6px;
-    padding: 6px 8px;
-    font-size: 0.9rem;
-  }
-  #gainRow {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--text-dim);
-    font-size: 0.9rem;
-  }
-  #gainRow input[type="range"] { width: 90px; }
-  #gainValue { min-width: 34px; text-align: right; }
   #debugReadout {
     font-size: 0.7rem;
     color: #5A6B8C;
     font-variant-numeric: tabular-nums;
   }
+  #menuBtn {
+    font-size: 1.3rem;
+    line-height: 1;
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--navy-light);
+    background: var(--navy-mid);
+    color: var(--text);
+    cursor: pointer;
+  }
+  #menuBtn:hover { border-color: var(--gold); }
 
-  /* ---- Hero row: streak + violations ---- */
+  /* ---- Warning banner ---- */
+  #warningBanner {
+    flex-shrink: 0;
+    text-align: center;
+    font-weight: 700;
+    border-radius: 10px;
+    width: 100%;
+    opacity: 0;
+    max-height: 0;
+    padding: 0 16px;
+    overflow: hidden;
+    transition: opacity 0.25s ease, max-height 0.25s ease, padding 0.25s ease;
+  }
+  #warningBanner.show { opacity: 1; max-height: 90px; padding: 12px 16px; }
+  #warningBanner.mild { background: rgba(227,168,87,0.16); color: var(--gold); border: 1px solid rgba(227,168,87,0.45); font-size: 1.1rem; }
+  #warningBanner.severe { background: rgba(214,69,69,0.2); color: #FF9D9D; border: 1px solid rgba(214,69,69,0.55); font-size: 1.15rem; animation: bannerPulse 1s ease-in-out infinite; }
+  #warningBanner.demeritWarn { background: rgba(227,168,87,0.26); color: #FFD9A0; border: 1px solid var(--gold); font-size: 1.3rem; }
+  #warningBanner.demeritFinal { background: rgba(214,69,69,0.32); color: #FFFFFF; border: 2px solid var(--red); font-size: 1.6rem; animation: bannerPulse 1s ease-in-out infinite; }
+  @keyframes bannerPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.015); } }
+
+  /* ---- Main: hero column + leaderboard column ---- */
+  #main {
+    flex: 1;
+    display: flex;
+    gap: 2.2vw;
+    min-height: 0;
+  }
+  #heroCol {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
   #hero {
     flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6vw;
+    min-height: 0;
   }
   #streakBlock { text-align: center; }
   #streakTime {
     font-family: Georgia, 'Times New Roman', serif;
     font-weight: 700;
-    font-size: 18vh;
+    font-size: 17vh;
     line-height: 1;
     color: var(--gold);
     font-variant-numeric: tabular-nums;
-    transition: color 0.3s ease;
   }
   #streakLabel {
-    font-size: 1.3rem;
+    font-size: 1.25rem;
     color: var(--text-dim);
     margin-top: 0.5vh;
   }
-  #streakBest {
+  #recordTag {
+    display: none;
     font-size: 1rem;
-    color: #6C7EA3;
-    margin-top: 0.3vh;
+    color: var(--gold);
+    font-weight: 700;
+    margin-top: 0.6vh;
   }
-  #streakBest b { color: var(--text-dim); }
-
   #violationBlock {
     text-align: center;
-    padding: 3vh 2.5vw;
+    padding: 2.5vh 2vw;
     border-left: 1px solid var(--navy-mid);
   }
   #violationCount {
     font-family: Georgia, serif;
     font-weight: 700;
-    font-size: 9vh;
+    font-size: 8.5vh;
     line-height: 1;
     color: var(--green);
     transition: color 0.25s ease, transform 0.15s ease;
   }
-  #violationCount.maxed {
-    animation: pulse 0.9s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-  }
-  #violationCaption { font-size: 1rem; color: var(--text-dim); margin-top: 0.3vh; }
-  #recordTag {
-    display: none;
-    font-size: 0.95rem;
-    color: var(--gold);
-    font-weight: 700;
-    margin-top: 0.4vh;
-  }
+  #violationCount.maxed { animation: pulse 0.9s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+  #violationCaption { font-size: 0.95rem; color: var(--text-dim); margin-top: 0.3vh; }
 
-  /* ---- EQ visualizer ---- */
-  #eqWrap {
-    flex-shrink: 0;
-    width: 100%;
-    max-width: 1000px;
-    margin: 0 auto 1.5vh;
-  }
+  #eqWrap { flex-shrink: 0; }
   #eq {
     display: flex;
     align-items: flex-end;
     justify-content: center;
     gap: 5px;
-    height: 14vh;
+    height: 13vh;
     background: var(--navy-mid);
     border-radius: 10px;
     padding: 10px 14px 0;
@@ -220,85 +182,115 @@
     background: linear-gradient(180deg, var(--gold), #C97A3A);
     transition: height 0.05s linear, background 0.15s ease;
   }
-  .eqBar.hot {
-    background: linear-gradient(180deg, var(--red), #8C2F2F);
-  }
+  .eqBar.hot { background: linear-gradient(180deg, var(--red), #8C2F2F); }
 
-  /* ---- Controls ---- */
-  #controls {
+  /* ---- Leaderboard column (always visible, no popup) ---- */
+  #leaderboardCol {
+    width: 360px;
+    flex-shrink: 0;
+    background: var(--navy-mid);
+    border-radius: 14px;
+    padding: 18px 18px 14px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .lbHeader { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  #leaderboardCol h3 { margin: 0; font-family: Georgia, serif; color: var(--gold); font-size: 1.05rem; }
+  #clearLog { font-size: 0.7rem; padding: 4px 9px; background: transparent; border: 1px solid var(--navy-light); }
+  #leaderboardCol table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  #leaderboardCol td, #leaderboardCol th {
+    padding: 5px 6px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  #leaderboardCol th { color: var(--text-dim); font-weight: 400; font-size: 0.78rem; }
+  #leaderboardCol td:first-child { width: 26px; }
+  #logTable tr:first-child td, #allTimeTable tr:first-child td { color: var(--gold); font-weight: 700; }
+  #leaderboardDivider { height: 1px; background: var(--navy-light); margin: 16px 0 12px; flex-shrink: 0; }
+
+  /* ---- Bottom action bar ---- */
+  #bottomBar {
     flex-shrink: 0;
     display: flex;
-    gap: 14px;
-    justify-content: center;
-    flex-wrap: wrap;
+    gap: 16px;
+    height: 11vh;
+    min-height: 64px;
   }
-  button {
+  .bigBtn {
+    flex: 1;
     font-family: Arial, Helvetica, sans-serif;
-    font-size: 0.95rem;
-    padding: 10px 18px;
-    border-radius: 8px;
+    font-size: clamp(1rem, 2.2vh, 1.5rem);
+    font-weight: 700;
+    border-radius: 14px;
     border: 1px solid var(--navy-mid);
     background: var(--navy-mid);
     color: var(--text);
     cursor: pointer;
   }
-  button:hover { border-color: var(--gold); }
-  button.primary {
+  .bigBtn:hover { border-color: var(--gold); }
+  .bigBtn.primary {
     background: var(--gold);
     color: var(--navy-dark);
-    font-weight: 700;
     border-color: var(--gold);
   }
-  #threshRow {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    color: var(--text-dim);
-    font-size: 0.85rem;
-  }
-  #threshRow .tgroup { display: flex; align-items: center; gap: 4px; }
-  #threshRow input {
-    width: 42px;
-    text-align: center;
-    background: var(--navy-mid);
-    color: var(--text);
-    border: 1px solid var(--navy-mid);
-    border-radius: 6px;
-    padding: 4px;
-    font-size: 0.85rem;
-  }
 
-  /* ---- Log drawer ---- */
-  #logToggle {
-    position: fixed;
-    bottom: 14px;
-    right: 16px;
-    font-size: 0.75rem;
-    color: var(--text-dim);
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 4px;
+  /* ---- Settings slide-out menu ---- */
+  #menuOverlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s ease;
+    z-index: 40;
   }
-  #logDrawer {
-    position: fixed;
-    bottom: 0; right: 0;
-    width: 340px;
-    max-height: 60vh;
+  #menuOverlay.open { opacity: 1; pointer-events: auto; }
+  #menuPanel {
+    position: fixed; top: 0; right: 0; bottom: 0;
+    width: 340px; max-width: 86vw;
     background: var(--navy-mid);
-    border-top-left-radius: 10px;
-    padding: 16px;
+    box-shadow: -8px 0 28px rgba(0,0,0,0.45);
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    z-index: 41;
+    padding: 20px 22px;
     overflow-y: auto;
-    display: none;
-    font-size: 0.85rem;
   }
-  #logDrawer.show { display: block; }
-  #logDrawer h3 { margin: 0 0 10px; font-family: Georgia, serif; color: var(--gold); font-size: 1.1rem; }
-  #logDrawer table { width: 100%; border-collapse: collapse; }
-  #logDrawer td, #logDrawer th { padding: 4px 6px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.08); }
-  #logDrawer td:first-child { width: 28px; }
-  #logDrawer tr:first-child td { color: var(--gold); font-weight: 700; }
-  #logDrawer button.small { font-size: 0.75rem; padding: 4px 8px; margin-top: 10px; }
+  #menuPanel.open { transform: translateX(0); }
+  .menuHeader { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+  .menuHeader h3 { margin: 0; font-family: Georgia, serif; color: var(--gold); font-size: 1.2rem; }
+  #menuCloseBtn {
+    background: none; border: none; color: var(--text-dim);
+    font-size: 1.3rem; cursor: pointer; padding: 2px 8px;
+  }
+  .menuSection { margin-bottom: 22px; }
+  .menuSection > label {
+    display: block; color: var(--text-dim); font-size: 0.85rem; margin-bottom: 7px;
+  }
+  .menuSection select {
+    width: 100%;
+    background: var(--navy-light);
+    color: var(--text);
+    border: 1px solid var(--navy-light);
+    border-radius: 7px;
+    padding: 8px;
+    font-size: 0.95rem;
+  }
+  .gainLabelRow { display: flex; justify-content: space-between; }
+  .gainLabelRow span { color: var(--text); font-weight: 700; }
+  .threshGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .tgroup {
+    display: flex; flex-direction: column; gap: 4px;
+    font-size: 0.8rem; color: var(--text-dim);
+  }
+  .tgroup input {
+    background: var(--navy-light);
+    color: var(--text);
+    border: 1px solid var(--navy-light);
+    border-radius: 6px;
+    padding: 7px;
+    font-size: 0.95rem;
+    width: 100%;
+  }
 </style>
 </head>
 <body>
@@ -308,72 +300,81 @@
       <input id="periodLabel" value="" placeholder="✎ Period name (e.g. Period 3)" spellcheck="false">
       <div id="statusPill" class="off">Mic off</div>
     </div>
-    <div id="debugReadout"></div>
+    <div id="topbar-right">
+      <div id="debugReadout"></div>
+      <button id="menuBtn" aria-label="Settings">☰</button>
+    </div>
   </div>
 
   <div id="warningBanner"><span id="warningText"></span></div>
 
-  <div id="hero">
-    <div id="streakBlock">
-      <div id="streakTime">0:00</div>
-      <div id="streakLabel">quiet streak</div>
-      <div id="streakBest">today's best: <b id="bestTime">0:00</b></div>
-      <div id="streakBest">all-time best: <b id="allTimeBestTime">0:00</b></div>
-      <div id="recordTag">🔥 New ALL-TIME record!</div>
+  <div id="main">
+    <div id="heroCol">
+      <div id="hero">
+        <div id="streakBlock">
+          <div id="streakTime">0:00</div>
+          <div id="streakLabel">quiet streak</div>
+          <div id="recordTag">🔥 New ALL-TIME record!</div>
+        </div>
+        <div id="violationBlock">
+          <div id="violationCount">0</div>
+          <div id="violationCaption">strikes</div>
+        </div>
+      </div>
+      <div id="eqWrap"><div id="eq"></div></div>
     </div>
-    <div id="violationBlock">
-      <div id="violationCount">0</div>
-      <div id="violationCaption">strikes</div>
+
+    <div id="leaderboardCol">
+      <div class="lbHeader"><h3>🏆 Today's Leaderboard</h3><button id="clearLog">clear</button></div>
+      <table id="logTable"><thead><tr><th></th><th>Period</th><th>Best</th><th>Strikes</th></tr></thead><tbody></tbody></table>
+      <div id="leaderboardDivider"></div>
+      <div class="lbHeader"><h3>⭐ All-Time Top 10</h3></div>
+      <table id="allTimeTable"><thead><tr><th></th><th>Date</th><th>Period</th><th>Best</th></tr></thead><tbody id="allTimeTableBody"></tbody></table>
     </div>
   </div>
 
-  <div id="eqWrap">
-    <div id="eq"></div>
-  </div>
-
-  <div id="controls">
-    <button id="micBtn" class="primary">Start listening</button>
-    <button id="pauseBtn">Pause monitoring <span style="opacity:0.6">(P)</span></button>
-    <div id="sensRow">
-      Sensitivity:
-      <select id="sensSelect">
-        <option value="auto" selected>Auto — adjusts itself</option>
-        <option value="lenient">Lenient — allow chatting</option>
-        <option value="balanced">Balanced (manual)</option>
-        <option value="strict">Strict (manual)</option>
-      </select>
-    </div>
-    <div id="gainRow">
-      Mic gain:
-      <input type="range" id="gainSlider" min="0.5" max="3" step="0.1" value="1.5">
-      <span id="gainValue">1.5x</span>
-    </div>
-    <div id="threshRow">
-      <div class="tgroup">Red at <input id="redMaxInput" type="number" min="2" max="100" value="20"></div>
-      <div class="tgroup">Dark red at <input id="darkStartInput" type="number" min="2" max="150" value="30"></div>
-      <div class="tgroup">Warn at <input id="warnAtInput" type="number" min="2" max="200" value="40"></div>
-      <div class="tgroup">Demerit at <input id="demeritAtInput" type="number" min="2" max="300" value="50"></div>
-    </div>
-    <button id="resetBtn">End Period</button>
+  <div id="bottomBar">
+    <button id="micBtn" class="bigBtn primary">Start Listening</button>
+    <button id="pauseBtn" class="bigBtn">Pause (P)</button>
+    <button id="resetBtn" class="bigBtn">End Period</button>
   </div>
 </div>
 
 <div id="toast"></div>
 
-<button id="logToggle">leaderboard ▲</button>
-<div id="logDrawer">
-  <h3>🏆 Today's Leaderboard — Best Streaks</h3>
-  <table id="logTable"><thead><tr><th></th><th>Period</th><th>Best</th><th>Strikes</th></tr></thead><tbody></tbody></table>
-  <button class="small" id="clearLog">Clear today's leaderboard</button>
+<div id="menuOverlay"></div>
+<div id="menuPanel">
+  <div class="menuHeader"><h3>Settings</h3><button id="menuCloseBtn">✕</button></div>
 
-  <h3 style="margin-top:18px;">⭐ All-Time Top 10</h3>
-  <table id="allTimeTable"><thead><tr><th></th><th>Date</th><th>Period</th><th>Best</th></tr></thead><tbody id="allTimeTableBody"></tbody></table>
+  <div class="menuSection">
+    <label>Sensitivity</label>
+    <select id="sensSelect">
+      <option value="auto" selected>Auto — adjusts itself</option>
+      <option value="lenient">Lenient — allow chatting</option>
+      <option value="balanced">Balanced (manual)</option>
+      <option value="strict">Strict (manual)</option>
+    </select>
+  </div>
+
+  <div class="menuSection">
+    <div class="gainLabelRow"><label style="margin-bottom:0;">Mic gain</label><span id="gainValue">1.5x</span></div>
+    <input type="range" id="gainSlider" min="0.5" max="3" step="0.1" value="1.5" style="width:100%;">
+  </div>
+
+  <div class="menuSection">
+    <label>Strike thresholds</label>
+    <div class="threshGrid">
+      <div class="tgroup">Red at<input id="redMaxInput" type="number" min="2" max="100" value="20"></div>
+      <div class="tgroup">Dark red at<input id="darkStartInput" type="number" min="2" max="150" value="30"></div>
+      <div class="tgroup">Warn at<input id="warnAtInput" type="number" min="2" max="200" value="40"></div>
+      <div class="tgroup">Demerit at<input id="demeritAtInput" type="number" min="2" max="300" value="50"></div>
+    </div>
+  </div>
 </div>
 
 <script>
 (function () {
   const streakTimeEl = document.getElementById('streakTime');
-  const bestTimeEl = document.getElementById('bestTime');
   const violationCountEl = document.getElementById('violationCount');
   const eqEl = document.getElementById('eq');
   const micBtn = document.getElementById('micBtn');
@@ -387,18 +388,19 @@
   const darkStartInput = document.getElementById('darkStartInput');
   const warnAtInput = document.getElementById('warnAtInput');
   const demeritAtInput = document.getElementById('demeritAtInput');
-  const allTimeBestTimeEl = document.getElementById('allTimeBestTime');
-  const allTimeTableBody = document.getElementById('allTimeTableBody');
   const resetBtn = document.getElementById('resetBtn');
   const debugReadout = document.getElementById('debugReadout');
-  const logToggle = document.getElementById('logToggle');
-  const logDrawer = document.getElementById('logDrawer');
   const logTableBody = document.querySelector('#logTable tbody');
   const clearLogBtn = document.getElementById('clearLog');
   const warningBanner = document.getElementById('warningBanner');
   const warningText = document.getElementById('warningText');
   const toastEl = document.getElementById('toast');
   const recordTagEl = document.getElementById('recordTag');
+  const allTimeTableBody = document.getElementById('allTimeTableBody');
+  const menuBtn = document.getElementById('menuBtn');
+  const menuPanel = document.getElementById('menuPanel');
+  const menuOverlay = document.getElementById('menuOverlay');
+  const menuCloseBtn = document.getElementById('menuCloseBtn');
 
   const NUM_BARS = 26;
   const bars = [];
@@ -412,14 +414,11 @@
   let audioCtx, analyser, timeData, freqData, source, stream;
   let rafId = null, tickerId = null;
 
-  const WINDOW_MS = 45000;      // rolling window for the noise floor — reacts faster than before
+  // ---- Sound detection settings (unchanged from prior tuning pass) ----
+  const WINDOW_MS = 45000;      // rolling window for the noise floor
   const BOOTSTRAP_MS = 8000;    // learning period before counting starts
   const SAMPLE_INTERVAL_MS = 150;
 
-  // marginMult is deliberately small: in a chronically loud room the "quiet 18%"
-  // floor is itself elevated, and a big proportional margin was rewarding that
-  // with a threshold that never got crossed. maxThreshold puts a hard ceiling
-  // on how far the line can drift no matter how the floor behaves.
   const SENSITIVITY = {
     lenient:  { marginBase: 15, marginMult: 0.25, sustainMs: 2000, cooldownMs: 4000, minThreshold: 25, maxThreshold: 70 },
     balanced: { marginBase: 10, marginMult: 0.15, sustainMs: 1200, cooldownMs: 3500, minThreshold: 20, maxThreshold: 58 },
@@ -432,21 +431,17 @@
   gainSlider.value = micGain;
   gainValue.textContent = micGain.toFixed(1) + 'x';
 
-  // Auto mode: a continuous "how strict right now" dial, not a fixed preset.
-  // 1.0 = Balanced (the resting/rewarded state), 2.0 = Strict, up to 3.0 = beyond
-  // Strict for a class that stays loud. Interpolated/extrapolated from the same
-  // three anchor presets so the math stays consistent with manual mode.
   let autoLevel = 1.0;
-  let violationTimes = []; // recent violation timestamps, for auto-adaptation
+  let violationTimes = [];
 
   function interpAt(level) {
     const L = SENSITIVITY.lenient, B = SENSITIVITY.balanced, S = SENSITIVITY.strict;
     function seg(key) {
       if (level <= 1) {
-        const t = level; // 0 (lenient) .. 1 (balanced)
+        const t = level;
         return L[key] + (B[key] - L[key]) * t;
       } else {
-        const t = level - 1; // 0 (balanced) .. 2 (strict, extrapolated beyond)
+        const t = level - 1;
         return B[key] + (S[key] - B[key]) * t;
       }
     }
@@ -472,6 +467,19 @@
     return 'Max';
   }
 
+  function adaptAutoLevel(now) {
+    if (sensitivity !== 'auto') return;
+    if (isPaused || now - sessionStart < BOOTSTRAP_MS) return;
+    violationTimes = violationTimes.filter(t => now - t <= 60000);
+    const recentCount = violationTimes.length;
+    const quietMs = now - streakStartTime;
+    if (recentCount >= 2) {
+      autoLevel = Math.min(3.0, autoLevel + 0.15);
+    } else if (recentCount === 0 && quietMs > 30000) {
+      autoLevel = Math.max(1.0, autoLevel - 0.1);
+    }
+  }
+
   // ---- Strike display thresholds (separate from audio detection above) ----
   let redMax = parseInt(localStorage.getItem('noiseRedMax'), 10) || 20;
   let darkStart = parseInt(localStorage.getItem('noiseDarkStart'), 10) || 30;
@@ -486,15 +494,15 @@
     const t = Math.min(1, count / redMax);
     let hue, lightness = 52;
     if (t <= 0.5) {
-      hue = 135 - (135 - 55) * (t / 0.5);   // green -> yellow
+      hue = 135 - (135 - 55) * (t / 0.5);
     } else {
-      hue = 55 - 55 * ((t - 0.5) / 0.5);    // yellow -> red
+      hue = 55 - 55 * ((t - 0.5) / 0.5);
     }
-    if (count >= redMax) hue = 0;           // fully red from redMax onward
+    if (count >= redMax) hue = 0;
     if (count > darkStart) {
       const span = Math.max(1, demeritAt - darkStart);
       const darkT = Math.min(1, (count - darkStart) / span);
-      lightness = 52 - (52 - 26) * darkT;   // deepens toward near-black red by demeritAt
+      lightness = 52 - (52 - 26) * darkT;
       hue = 0;
     }
     return `hsl(${hue}, 72%, ${lightness}%)`;
@@ -507,9 +515,6 @@
     dailyRecordMs = existing.reduce((m, r) => Math.max(m, r.bestMs || 0), 0);
   }
 
-  // All-time store: separate from the daily log, never auto-cleared by "Clear
-  // today's leaderboard". Lives in this browser's localStorage only — see
-  // chat notes on GitHub Pages / static hosting for what that does and doesn't cover.
   const ALL_TIME_KEY = 'noiseAllTime';
   const MAX_ALLTIME_ENTRIES = 1000;
   let allTimeRecordMs = 0;
@@ -563,20 +568,7 @@
     }
   }
 
-  function adaptAutoLevel(now) {
-    if (sensitivity !== 'auto') return;
-    if (isPaused || now - sessionStart < BOOTSTRAP_MS) return;
-    violationTimes = violationTimes.filter(t => now - t <= 60000);
-    const recentCount = violationTimes.length;
-    const quietMs = now - streakStartTime;
-    if (recentCount >= 2) {
-      autoLevel = Math.min(3.0, autoLevel + 0.15);
-    } else if (recentCount === 0 && quietMs > 30000) {
-      autoLevel = Math.max(1.0, autoLevel - 0.1);
-    }
-  }
-
-  let levelBuffer = [];         // {t, level}
+  let levelBuffer = [];
   let sessionStart = 0;
   let threshold = 50;
   let smoothedLevel = 0;
@@ -587,7 +579,7 @@
   let isListening = false;
   let isPaused = false;
   let lastSampleTime = 0;
-  let aboveSince = null;        // timestamp when level first crossed threshold, continuously
+  let aboveSince = null;
 
   function volumeScale(rms) {
     return Math.min(100, Math.round(rms * 100 * 3.2));
@@ -603,7 +595,7 @@
   function recomputeThreshold() {
     const now = Date.now();
     levelBuffer = levelBuffer.filter(p => now - p.t <= WINDOW_MS);
-    if (levelBuffer.length < 20) return; // not enough data yet
+    if (levelBuffer.length < 20) return;
     const cfg = currentCfg();
     const levels = levelBuffer.map(p => p.level).sort((a, b) => a - b);
     const floorIdx = Math.floor(levels.length * 0.18);
@@ -627,16 +619,16 @@
       return;
     }
     if (isPaused) return;
-    if (now - sessionStart < BOOTSTRAP_MS) return; // still learning the room
+    if (now - sessionStart < BOOTSTRAP_MS) return;
     if (now - lastViolationTime < cfg.cooldownMs) return;
-    if (now - aboveSince < cfg.sustainMs) return; // hasn't been sustained long enough yet
+    if (now - aboveSince < cfg.sustainMs) return;
 
     lastViolationTime = now;
-    aboveSince = now; // avoid re-firing every frame while still loud
+    aboveSince = now;
     violationCount++;
     violationTimes.push(now);
     updateViolationDisplay();
-    streakStartTime = now; // streak resets
+    streakStartTime = now;
   }
 
   function updateStreakDisplay() {
@@ -644,24 +636,20 @@
     const elapsed = now - streakStartTime;
     if (elapsed > bestStreakMs) bestStreakMs = elapsed;
     streakTimeEl.textContent = fmtTime(elapsed);
-    const combinedBest = Math.max(dailyRecordMs, bestStreakMs);
-    bestTimeEl.textContent = fmtTime(combinedBest);
-    const combinedAllTime = Math.max(allTimeRecordMs, bestStreakMs);
-    allTimeBestTimeEl.textContent = fmtTime(combinedAllTime);
     recordTagEl.style.display = (allTimeRecordMs > 0 && elapsed > allTimeRecordMs) ? 'block' : 'none';
     adaptAutoLevel(now);
   }
 
   function renderEQ() {
     analyser.getByteFrequencyData(freqData);
-    const usableBins = Math.floor(freqData.length * 0.55); // focus on voice/noise range
+    const usableBins = Math.floor(freqData.length * 0.55);
     const perBar = Math.max(1, Math.floor(usableBins / NUM_BARS));
     const hot = smoothedLevel >= threshold;
     for (let i = 0; i < NUM_BARS; i++) {
       let sum = 0;
       const start = i * perBar;
       for (let j = 0; j < perBar; j++) sum += freqData[start + j] || 0;
-      const avg = sum / perBar; // 0-255
+      const avg = sum / perBar;
       const pct = Math.min(100, Math.max(4, (avg / 255) * 130));
       bars[i].style.height = pct + '%';
       bars[i].classList.toggle('hot', hot);
@@ -714,7 +702,7 @@
     } catch (err) {
       statusPill.textContent = 'Mic access denied';
       statusPill.className = 'off';
-      alert('This needs microphone access to work. Allow it in your browser, then click "Start listening" again.');
+      alert('This needs microphone access to work. Allow it in your browser, then click "Start Listening" again.');
       return;
     }
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -734,17 +722,15 @@
     violationTimes = [];
     isListening = true;
     isPaused = false;
-    pauseBtn.textContent = 'Pause monitoring (P)';
+    pauseBtn.textContent = 'Pause (P)';
     clearWarningBanner();
     computeDailyRecordMs();
     computeAllTimeRecordMs();
 
-    micBtn.textContent = 'Stop listening';
+    micBtn.textContent = 'Stop Listening';
     tick();
     tickerId = setInterval(updateStreakDisplay, 500);
   }
-
-  periodLabel.addEventListener('focus', () => periodLabel.select());
 
   function stopMic() {
     isListening = false;
@@ -754,7 +740,7 @@
     if (audioCtx) audioCtx.close();
     statusPill.textContent = 'Mic off';
     statusPill.className = 'off';
-    micBtn.textContent = 'Start listening';
+    micBtn.textContent = 'Start Listening';
     debugReadout.textContent = '';
     bars.forEach(b => { b.style.height = '4%'; b.classList.remove('hot'); });
   }
@@ -767,7 +753,7 @@
     if (!isListening) return;
     isPaused = !isPaused;
     aboveSince = null;
-    pauseBtn.textContent = isPaused ? 'Resume monitoring (P)' : 'Pause monitoring (P)';
+    pauseBtn.textContent = isPaused ? 'Resume (P)' : 'Pause (P)';
     pauseBtn.classList.toggle('primary', isPaused);
   }
   pauseBtn.addEventListener('click', togglePause);
@@ -799,13 +785,21 @@
     updateViolationDisplay();
   });
   warnAtInput.addEventListener('input', () => {
-    warnAt = Math.max(2, parseInt(warnAtInput.value, 10) || 30);
+    warnAt = Math.max(2, parseInt(warnAtInput.value, 10) || 40);
     localStorage.setItem('noiseWarnAt', warnAt);
   });
   demeritAtInput.addEventListener('input', () => {
     demeritAt = Math.max(2, parseInt(demeritAtInput.value, 10) || 50);
     localStorage.setItem('noiseDemeritAt', demeritAt);
   });
+
+  periodLabel.addEventListener('focus', () => periodLabel.select());
+
+  function openMenu() { menuPanel.classList.add('open'); menuOverlay.classList.add('open'); }
+  function closeMenu() { menuPanel.classList.remove('open'); menuOverlay.classList.remove('open'); }
+  menuBtn.addEventListener('click', openMenu);
+  menuCloseBtn.addEventListener('click', closeMenu);
+  menuOverlay.addEventListener('click', closeMenu);
 
   function logPeriod(label) {
     const today = new Date().toISOString().slice(0, 10);
@@ -864,7 +858,7 @@
     autoLevel = 1.0;
     violationTimes = [];
     isPaused = false;
-    pauseBtn.textContent = 'Pause monitoring (P)';
+    pauseBtn.textContent = 'Pause (P)';
     pauseBtn.classList.remove('primary');
     sessionStart = Date.now();
     streakStartTime = sessionStart;
@@ -874,16 +868,9 @@
     showToast('Period logged ✓ — ' + label);
   });
 
-  logToggle.addEventListener('click', () => {
-    logDrawer.classList.toggle('show');
-    logToggle.textContent = logDrawer.classList.contains('show') ? 'leaderboard ▼' : 'leaderboard ▲';
-    if (logDrawer.classList.contains('show')) renderLog();
-  });
-
   clearLogBtn.addEventListener('click', () => {
     const key = 'noiseLog_' + new Date().toISOString().slice(0, 10);
     localStorage.removeItem(key);
-    dailyRecordMs = 0;
     renderLog();
   });
 
