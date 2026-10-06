@@ -941,6 +941,7 @@
       showToast('Nothing to log yet. Start listening first.');
       return;
     }
+    if (isListening) stopMic();   // stops the mic and locks in the final streak first
     const label = (periodLabel.value || '').trim() || 'Unnamed period';
     logPeriod(label);
     violationCount = 0;
@@ -958,6 +959,7 @@
     clearWarningBanner();
     streakTimeEl.textContent = '0:00';
     recordTagEl.style.display = 'none';
+    periodLabel.value = '';   // clear the name so it's blank for the next class
     showToast('Period logged ✓ — ' + label);
   });
 
