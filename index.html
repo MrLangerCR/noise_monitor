@@ -95,11 +95,9 @@
     overflow: hidden;
     transition: opacity 0.25s ease, max-height 0.25s ease, padding 0.25s ease;
   }
-  #warningBanner.show { opacity: 1; max-height: 90px; padding: 12px 16px; }
-  #warningBanner.mild { background: rgba(227,168,87,0.16); color: var(--gold); border: 1px solid rgba(227,168,87,0.45); font-size: 1.1rem; }
-  #warningBanner.severe { background: rgba(214,69,69,0.2); color: #FF9D9D; border: 1px solid rgba(214,69,69,0.55); font-size: 1.15rem; animation: bannerPulse 1s ease-in-out infinite; }
-  #warningBanner.demeritWarn { background: rgba(227,168,87,0.26); color: #FFD9A0; border: 1px solid var(--gold); font-size: 1.3rem; }
-  #warningBanner.demeritFinal { background: rgba(214,69,69,0.32); color: #FFFFFF; border: 2px solid var(--red); font-size: 1.6rem; animation: bannerPulse 1s ease-in-out infinite; }
+  #warningBanner.show { opacity: 1; max-height: 160px; padding: 14px 18px; }
+  #warningBanner.demeritWarn { background: rgba(227,168,87,0.28); color: #FFD9A0; border: 2px solid var(--gold); font-size: clamp(1.6rem, 4.2vh, 2.6rem); }
+  #warningBanner.demeritFinal { background: rgba(214,69,69,0.38); color: #FFFFFF; border: 3px solid var(--red); font-size: clamp(2rem, 5.5vh, 3.4rem); animation: bannerPulse 1s ease-in-out infinite; }
   @keyframes bannerPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.015); } }
 
   /* ---- Main: hero column + leaderboard column ---- */
@@ -235,6 +233,45 @@
     border-color: var(--gold);
   }
 
+  /* ---- Big warning overlay (screen tint + centered message) ---- */
+  #warnOverlay {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.35s ease, background 0.35s ease;
+    z-index: 35;
+  }
+  #warnOverlay.show { opacity: 1; }
+  #warnOverlay.notice { background: rgba(200,130,30,0.30); }
+  #warnOverlay.reset { background: rgba(170,30,30,0.42); }
+  #warnOverlay.milestone { background: rgba(150,20,20,0.50); }
+  #warnCard {
+    text-align: center;
+    background: rgba(15,28,51,0.88);
+    border: 3px solid var(--gold);
+    border-radius: 24px;
+    padding: 5vh 5vw;
+    max-width: 88vw;
+    box-shadow: 0 10px 60px rgba(0,0,0,0.5);
+  }
+  #warnOverlay.reset #warnCard, #warnOverlay.milestone #warnCard { border-color: #FF6B6B; }
+  #warnOverlay.show #warnCard { animation: cardPulse 1.4s ease-in-out infinite; }
+  @keyframes cardPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.025); } }
+  #warnTitle {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-weight: 700;
+    font-size: 12vh;
+    line-height: 1.05;
+    color: var(--text);
+  }
+  #warnSub {
+    font-size: 4.6vh;
+    margin-top: 2vh;
+    color: var(--gold);
+    font-weight: 700;
+  }
+  #warnOverlay.reset #warnSub, #warnOverlay.milestone #warnSub { color: #FFB3B3; }
+
   /* ---- Settings slide-out menu ---- */
   #menuOverlay {
     position: fixed; inset: 0;
@@ -340,6 +377,8 @@
   </div>
 </div>
 
+<div id="warnOverlay"><div id="warnCard"><div id="warnTitle"></div><div id="warnSub"></div></div></div>
+
 <div id="toast"></div>
 
 <div id="menuOverlay"></div>
@@ -368,6 +407,8 @@
       <div class="tgroup">Dark red at<input id="darkStartInput" type="number" min="2" max="150" value="30"></div>
       <div class="tgroup">Warn at<input id="warnAtInput" type="number" min="2" max="200" value="40"></div>
       <div class="tgroup">Demerit at<input id="demeritAtInput" type="number" min="2" max="300" value="50"></div>
+      <div class="tgroup">"Lower volume" at<input id="noticeAtInput" type="number" min="1" max="50" value="2"></div>
+      <div class="tgroup">"Quiet reset" at<input id="resetAtInput" type="number" min="2" max="100" value="5"></div>
     </div>
   </div>
 </div>
@@ -395,6 +436,11 @@
   const warningBanner = document.getElementById('warningBanner');
   const warningText = document.getElementById('warningText');
   const toastEl = document.getElementById('toast');
+  const warnOverlay = document.getElementById('warnOverlay');
+  const warnTitle = document.getElementById('warnTitle');
+  const warnSub = document.getElementById('warnSub');
+  const noticeAtInput = document.getElementById('noticeAtInput');
+  const resetAtInput = document.getElementById('resetAtInput');
   const recordTagEl = document.getElementById('recordTag');
   const allTimeTableBody = document.getElementById('allTimeTableBody');
   const menuBtn = document.getElementById('menuBtn');
@@ -485,6 +531,10 @@
   let darkStart = parseInt(localStorage.getItem('noiseDarkStart'), 10) || 30;
   let warnAt = parseInt(localStorage.getItem('noiseWarnAt'), 10) || 40;
   let demeritAt = parseInt(localStorage.getItem('noiseDemeritAt'), 10) || 50;
+  let noticeAt = parseInt(localStorage.getItem('noiseNoticeAt'), 10) || 2;
+  let resetAt = parseInt(localStorage.getItem('noiseResetAt'), 10) || 5;
+  noticeAtInput.value = noticeAt;
+  resetAtInput.value = resetAt;
   redMaxInput.value = redMax;
   darkStartInput.value = darkStart;
   warnAtInput.value = warnAt;
@@ -542,29 +592,55 @@
     toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
   }
 
+  let milestoneUntil = 0;
+  let milestoneKind = null;
+
+  function hideOverlay() {
+    warnOverlay.className = '';
+  }
+  function showOverlay(cls, title, sub) {
+    warnOverlay.className = 'show ' + cls;
+    warnTitle.textContent = title;
+    warnSub.textContent = sub;
+  }
+
   function clearWarningBanner() {
     warningBanner.className = '';
     warningText.textContent = '';
+    hideOverlay();
+    milestoneUntil = 0;
+    milestoneKind = null;
   }
 
   function updateWarningBanner(now) {
-    const win45 = violationTimes.filter(t => now - t <= 45000).length;
-    const win60 = violationTimes.filter(t => now - t <= 60000).length;
-    let cls = null, text = null;
+    // Standing banner for the demerit milestones
     if (violationCount >= demeritAt) {
-      cls = 'demeritFinal'; text = 'Class demerit for noise';
+      warningBanner.className = 'show demeritFinal';
+      warningText.textContent = 'Class demerit for noise';
     } else if (violationCount >= warnAt) {
-      cls = 'demeritWarn'; text = '⚠ Warning: close to a class demerit for noise';
-    } else if (win60 >= 4) {
-      cls = 'severe'; text = 'Being quiet will stop the strikes';
-    } else if (win45 >= 2) {
-      cls = 'mild'; text = 'Lower your volume';
-    }
-    if (cls) {
-      warningBanner.className = 'show ' + cls;
-      warningText.textContent = text;
+      warningBanner.className = 'show demeritWarn';
+      warningText.textContent = '⚠ Class demerit warning — please quiet down';
     } else {
-      clearWarningBanner();
+      warningBanner.className = '';
+      warningText.textContent = '';
+    }
+
+    // Big screen-tint overlay: milestone > quiet reset > lower volume
+    const sinceStrike = now - lastViolationTime;
+    const recentNotice = violationTimes.filter(t => now - t <= 45000).length;
+    const recentReset = violationTimes.filter(t => now - t <= 60000).length;
+    if (now < milestoneUntil) {
+      if (milestoneKind === 'demerit') {
+        showOverlay('milestone', 'Class demerit for noise', '');
+      } else {
+        showOverlay('milestone', 'Class demerit warning', 'Strikes are getting high. Please quiet down now.');
+      }
+    } else if (recentReset >= resetAt && sinceStrike < 10000) {
+      showOverlay('reset', 'Quiet reset', 'Voices off and focus. Silence stops the strikes.');
+    } else if (recentNotice >= noticeAt && sinceStrike < 7000) {
+      showOverlay('notice', 'Please lower your volume', 'Quiet talking only.');
+    } else {
+      hideOverlay();
     }
   }
 
@@ -629,6 +705,11 @@
     violationTimes.push(now);
     updateViolationDisplay();
     streakStartTime = now;
+    if (violationCount === demeritAt) {
+      milestoneKind = 'demerit'; milestoneUntil = now + 10000;
+    } else if (violationCount === warnAt) {
+      milestoneKind = 'warn'; milestoneUntil = now + 10000;
+    }
   }
 
   function updateStreakDisplay() {
@@ -791,6 +872,15 @@
   demeritAtInput.addEventListener('input', () => {
     demeritAt = Math.max(2, parseInt(demeritAtInput.value, 10) || 50);
     localStorage.setItem('noiseDemeritAt', demeritAt);
+  });
+
+  noticeAtInput.addEventListener('input', () => {
+    noticeAt = Math.max(1, parseInt(noticeAtInput.value, 10) || 2);
+    localStorage.setItem('noiseNoticeAt', noticeAt);
+  });
+  resetAtInput.addEventListener('input', () => {
+    resetAt = Math.max(2, parseInt(resetAtInput.value, 10) || 5);
+    localStorage.setItem('noiseResetAt', resetAt);
   });
 
   periodLabel.addEventListener('focus', () => periodLabel.select());
