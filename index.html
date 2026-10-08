@@ -772,32 +772,60 @@
     evaluateLevel(smoothedLevel, now);
     updateWarningBanner(now);
 
-    renderEQ();
-    eqEl.classList.toggle('paused', isPaused);
+    if (!document.hidden) {
+      renderEQ();
+      eqEl.classList.toggle('paused', isPaused);
+    }
   }
 
-  // Drive tick() from a Web Worker timer at ~60Hz (same rate the tuning was done at).
-  // Browsers pause requestAnimationFrame in background tabs but keep worker timers running.
-  let tickWorker = null, fallbackTimer = null;
-  function startTicking() {
-    stopTicking();
+  // One scheduler step: measure, and refresh the streak timer every 500ms.
+  let lastStreakUpdate = 0;
+  function frame() {
+    if (!isListening) return;
+    tick();
+    const now = Date.now();
+    if (now - lastStreakUpdate >= 500) {
+      lastStreakUpdate = now;
+      updateStreakDisplay();
+    }
+  }
+
+  // Visible tab: screen-refresh loop (same feel as before the tab-switch fix).
+  // Hidden tab: worker timer, because browsers pause requestAnimationFrame in background tabs.
+  function startForeground() {
+    const loop = () => {
+      if (!isListening || document.hidden) { rafId = null; return; }
+      frame();
+      rafId = requestAnimationFrame(loop);
+    };
+    rafId = requestAnimationFrame(loop);
+  }
+  function startBackground() {
     try {
       const src = "let id=null;onmessage=function(e){if(e.data==='start'){if(id)clearInterval(id);id=setInterval(function(){postMessage(0)},16);}else{if(id)clearInterval(id);id=null;}};";
       tickWorker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
-      tickWorker.onmessage = () => { if (isListening) tick(); };
+      tickWorker.onmessage = () => { if (isListening) frame(); };
       tickWorker.postMessage('start');
     } catch (err) {
-      fallbackTimer = setInterval(() => { if (isListening) tick(); }, 16);
+      fallbackTimer = setInterval(() => { if (isListening) frame(); }, 16);
     }
   }
+  let tickWorker = null, fallbackTimer = null;
   function stopTicking() {
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
     if (tickWorker) { tickWorker.postMessage('stop'); tickWorker.terminate(); tickWorker = null; }
     if (fallbackTimer) { clearInterval(fallbackTimer); fallbackTimer = null; }
   }
+  function startTicking() {
+    stopTicking();
+    if (document.hidden) startBackground(); else startForeground();
+  }
 
-  // If the browser suspends audio while the tab is hidden, wake it back up.
+  // Switch modes when the tab is hidden/shown, and wake the audio if the browser suspended it.
   document.addEventListener('visibilitychange', () => {
+    if (!isListening) return;
     if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    startTicking();
   });
 
   async function startMic() {
@@ -832,8 +860,8 @@
     computeAllTimeRecordMs();
 
     micBtn.textContent = 'Stop Listening';
+    lastStreakUpdate = 0;
     startTicking();
-    tickerId = setInterval(updateStreakDisplay, 500);
   }
 
   function stopMic() {
