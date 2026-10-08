@@ -774,8 +774,31 @@
 
     renderEQ();
     eqEl.classList.toggle('paused', isPaused);
-    rafId = requestAnimationFrame(tick);
   }
+
+  // Drive tick() from a Web Worker timer at ~60Hz (same rate the tuning was done at).
+  // Browsers pause requestAnimationFrame in background tabs but keep worker timers running.
+  let tickWorker = null, fallbackTimer = null;
+  function startTicking() {
+    stopTicking();
+    try {
+      const src = "let id=null;onmessage=function(e){if(e.data==='start'){if(id)clearInterval(id);id=setInterval(function(){postMessage(0)},16);}else{if(id)clearInterval(id);id=null;}};";
+      tickWorker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+      tickWorker.onmessage = () => { if (isListening) tick(); };
+      tickWorker.postMessage('start');
+    } catch (err) {
+      fallbackTimer = setInterval(() => { if (isListening) tick(); }, 16);
+    }
+  }
+  function stopTicking() {
+    if (tickWorker) { tickWorker.postMessage('stop'); tickWorker.terminate(); tickWorker = null; }
+    if (fallbackTimer) { clearInterval(fallbackTimer); fallbackTimer = null; }
+  }
+
+  // If the browser suspends audio while the tab is hidden, wake it back up.
+  document.addEventListener('visibilitychange', () => {
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  });
 
   async function startMic() {
     try {
@@ -809,7 +832,7 @@
     computeAllTimeRecordMs();
 
     micBtn.textContent = 'Stop Listening';
-    tick();
+    startTicking();
     tickerId = setInterval(updateStreakDisplay, 500);
   }
 
@@ -817,7 +840,7 @@
     updateStreakDisplay();   // lock in the final streak before the timer stops
     hideOverlay();           // don't leave a transient warning frozen on screen
     isListening = false;
-    if (rafId) cancelAnimationFrame(rafId);
+    stopTicking();
     if (tickerId) clearInterval(tickerId);
     if (stream) stream.getTracks().forEach(t => t.stop());
     if (audioCtx) audioCtx.close();
@@ -977,7 +1000,7 @@
   renderAllTimeLeaderboard();
 
   window.addEventListener('beforeunload', () => {
-    if (rafId) cancelAnimationFrame(rafId);
+    stopTicking();
     if (tickerId) clearInterval(tickerId);
   });
 })();
