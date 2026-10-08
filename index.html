@@ -408,7 +408,7 @@
       <div class="tgroup">Warn at<input id="warnAtInput" type="number" min="2" max="200" value="40"></div>
       <div class="tgroup">Demerit at<input id="demeritAtInput" type="number" min="2" max="300" value="50"></div>
       <div class="tgroup">"Lower volume" at<input id="noticeAtInput" type="number" min="1" max="50" value="2"></div>
-      <div class="tgroup">"Quiet reset" at<input id="resetAtInput" type="number" min="2" max="100" value="5"></div>
+      <div class="tgroup">"Quiet reset" at<input id="resetAtInput" type="number" min="2" max="100" value="10"></div>
     </div>
   </div>
 </div>
@@ -532,7 +532,7 @@
   let warnAt = parseInt(localStorage.getItem('noiseWarnAt'), 10) || 40;
   let demeritAt = parseInt(localStorage.getItem('noiseDemeritAt'), 10) || 50;
   let noticeAt = parseInt(localStorage.getItem('noiseNoticeAt'), 10) || 2;
-  let resetAt = parseInt(localStorage.getItem('noiseResetAt'), 10) || 5;
+  let resetAt = parseInt(localStorage.getItem('noiseResetAt_v2'), 10) || 10;
   noticeAtInput.value = noticeAt;
   resetAtInput.value = resetAt;
   redMaxInput.value = redMax;
@@ -904,8 +904,8 @@
     localStorage.setItem('noiseNoticeAt', noticeAt);
   });
   resetAtInput.addEventListener('input', () => {
-    resetAt = Math.max(2, parseInt(resetAtInput.value, 10) || 5);
-    localStorage.setItem('noiseResetAt', resetAt);
+    resetAt = Math.max(2, parseInt(resetAtInput.value, 10) || 10);
+    localStorage.setItem('noiseResetAt_v2', resetAt);
   });
 
   periodLabel.addEventListener('focus', () => periodLabel.select());
